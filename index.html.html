@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Visitas — Apartamentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3F1EC;
+    --paper-2:#EAE7DF;
+    --ink:#1E2A2F;
+    --navy:#1F3B45;
+    --navy-2:#2C5364;
+    --ochre:#C08A2E;
+    --ochre-light:#E9C877;
+    --brick:#B4543A;
+    --line:#D8D3C6;
+    --green:#4C7A5E;
+    --red:#B4463C;
+    --white:#FFFDF9;
+    --shadow: 0 1px 2px rgba(30,42,47,.06), 0 6px 20px -8px rgba(30,42,47,.18);
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .bg-grid{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity:.35;
+    mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+
+  header.top{
+    padding:36px 28px 22px;
+    max-width:1180px; margin:0 auto;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--navy-2); font-weight:500;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ochre);display:inline-block;}
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(28px,4vw,40px);
+    margin:6px 0 4px;
+    color:var(--navy);
+    letter-spacing:-.01em;
+  }
+  .sub{color:#5B6A6E; font-size:14.5px; max-width:520px; line-height:1.5;}
+
+  .stats{
+    display:flex; gap:0; margin-top:26px;
+    border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; background:var(--white);
+    max-width:820px;
+  }
+  .stat{
+    flex:1; padding:14px 18px; border-right:1px solid var(--line);
+    cursor:pointer; transition:background .15s;
+    position:relative;
+  }
+  .stat:last-child{border-right:none;}
+  .stat:hover{background:#FBF9F4;}
+  .stat.active{background:var(--navy); }
+  .stat.active .stat-num, .stat.active .stat-label{color:var(--white);}
+  .stat-num{font-family:'Fraunces',serif; font-size:24px; font-weight:600; color:var(--navy); line-height:1;}
+  .stat-label{font-size:11.5px; color:#7A8A8D; margin-top:5px; text-transform:uppercase; letter-spacing:.06em;}
+
+  main{max-width:1180px; margin:0 auto; padding:26px 28px 80px;}
+
+  .toolbar{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    margin-bottom:22px;
+  }
+  .search-wrap{position:relative; flex:1; min-width:220px;}
+  .search-wrap svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.45;}
+  input[type=text], input[type=search], input[type=number], input[type=url], input[type=date], input[type=time], select, textarea{
+    font-family:'Inter',sans-serif; font-size:14px;
+    border:1px solid var(--line); border-radius:8px;
+    background:var(--white); color:var(--ink);
+    padding:10px 12px;
+  }
+  .search-wrap input{width:100%; padding-left:36px;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--ochre-light); outline-offset:0; border-color:var(--ochre);}
+
+  select#sortSelect{min-width:170px;}
+
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
+    border:none; border-radius:8px; padding:10px 16px;
+    cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+    transition:transform .08s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--navy); color:var(--white);}
+  .btn-primary:hover{background:#16292F;}
+  .btn-ghost{background:var(--white); color:var(--navy); border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--navy-2);}
+  .btn-sm{padding:6px 10px; font-size:12.5px; border-radius:6px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:14px;
+  }
+  .card{
+    background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 16px 14px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:10px;
+    position:relative; transition:border-color .15s;
+  }
+  .card:hover{border-color:var(--navy-2);}
+  .card-cover{width:calc(100% + 32px);height:180px;object-fit:cover;display:block;margin:-16px -16px 2px;border-radius:10px 10px 0 0;background:var(--paper-2);}
+  .card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .bairro{font-family:'Fraunces',serif; font-weight:600; font-size:18px; color:var(--navy); line-height:1.2;}
+  .valor{font-family:'JetBrains Mono',monospace; font-weight:500; font-size:15px; color:var(--ink); white-space:nowrap;}
+  .meta-row{display:flex; gap:14px; font-size:13px; color:#5B6A6E;}
+  .meta-row span{display:flex; align-items:center; gap:4px;}
+  .endereco{font-size:13px; color:#5B6A6E; line-height:1.4; min-height:18px;}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:999px;
+    width:fit-content; letter-spacing:.01em;
+  }
+  .badge::before{content:"";width:6px;height:6px;border-radius:50%;}
+  .badge-gray{background:#EAE7DF; color:#5B6A6E;} .badge-gray::before{background:#9AA6A8;}
+  .badge-amber{background:#FBF0DC; color:#8A5B10;} .badge-amber::before{background:var(--ochre);}
+  .badge-blue{background:#E4EEF0; color:#1F5A66;} .badge-blue::before{background:var(--navy-2);}
+  .badge-green{background:#E4EFE7; color:#33593F;} .badge-green::before{background:var(--green);}
+  .badge-red{background:#F5E4E1; color:#8A3125;} .badge-red::before{background:var(--red);}
+
+  .status-text{font-size:12.5px; color:#7A8A8D; margin-top:-4px;}
+
+  .card-actions{
+    margin-top:auto; padding-top:10px; border-top:1px dashed var(--line);
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  }
+  .icon-link{
+    font-size:12px; font-weight:600; color:var(--navy-2); text-decoration:none;
+    display:flex; align-items:center; gap:5px; padding:5px 9px; border-radius:6px;
+    border:1px solid var(--line); background:var(--white);
+  }
+  .icon-link:hover{background:#F1F5F5;}
+  .icon-link.wa{color:var(--green);}
+  .icon-link.wa:hover{background:#EEF5F0;}
+  .spacer{flex:1;}
+  .icon-btn{
+    border:none; background:transparent; cursor:pointer; padding:6px; border-radius:6px;
+    color:#8A8F80; display:flex; align-items:center;
+  }
+  .icon-btn:hover{background:#F1EFE8; color:var(--ink);}
+  .icon-btn.danger:hover{color:var(--red); background:#F5E4E1;}
+
+  .empty{
+    text-align:center; padding:70px 20px; color:#7A8A8D;
+    border:1px dashed var(--line); border-radius:var(--radius); background:var(--white);
+  }
+  .empty h3{font-family:'Fraunces',serif; color:var(--navy); font-size:20px; margin-bottom:6px;}
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,28,30,.5); backdrop-filter: blur(2px);
+    display:none; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:50;
+    overflow-y:auto;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--paper); border-radius:14px; width:100%; max-width:560px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25); border:1px solid var(--line);
+    animation:pop .18s ease;
+  }
+  @keyframes pop{from{opacity:0; transform:translateY(8px) scale(.98);} to{opacity:1; transform:none;}}
+  .modal-head{
+    padding:20px 24px 14px; border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .modal-head h2{font-family:'Fraunces',serif; font-size:20px; color:var(--navy); margin:0; font-weight:600;}
+  .modal-body{padding:20px 24px; display:grid; gap:14px;}
+  .form-row{display:grid; gap:6px;}
+  .form-row.two{grid-template-columns:1fr 1fr; display:grid; gap:14px;}
+  .form-row.two .form-row{margin:0;}
+  label{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#5B6A6E;}
+  .modal-foot{
+    padding:16px 24px 22px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--line);
+  }
+  .close-x{background:none; border:none; cursor:pointer; color:#7A8A8D; font-size:20px; line-height:1; padding:4px;}
+  .close-x:hover{color:var(--ink);}
+  .hint{font-size:11.5px; color:#9AA6A8;}
+  .cover-preview{display:none;width:100%;height:190px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--paper-2);}
+  .cover-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  input[type=file]{font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);}
+
+  footer.appfoot{
+    max-width:1180px; margin:0 auto; padding:0 28px 40px; color:#9AA6A8; font-size:12px;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
+  .appfoot a{color:var(--navy-2); cursor:pointer; text-decoration:underline;}
+
+  @media (max-width:640px){
+    .stats{flex-wrap:wrap;}
+    .stat{flex:1 1 33%; border-bottom:1px solid var(--line);}
+    .form-row.two{grid-template-columns:1fr;}
+  }
+
+  #toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--navy); color:var(--white); padding:11px 18px; border-radius:8px;
+    font-size:13px; font-weight:500; opacity:0; pointer-events:none; transition:all .25s ease;
+    box-shadow:0 10px 30px rgba(0,0,0,.25); z-index:100;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<header class="top">
+  <div class="eyebrow">Caça ao apê — Belo Horizonte</div>
+  <h1>Controle de Visitas</h1>
+  <p class="sub">Cada lead salvo direto no navegador — sem planilha bagunçada. Adicione, edite e acompanhe o status de cada apartamento visitado.</p>
+
+  <div class="stats" id="statsBar"></div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="searchInput" placeholder="Buscar em todos os dados do card: bairro, número, link, observações...">
+    </div>
+    <select id="sortSelect">
+      <option value="recent">Mais recentes</option>
+      <option value="valor-asc">Valor: menor primeiro</option>
+      <option value="valor-desc">Valor: maior primeiro</option>
+      <option value="bairro">Bairro (A–Z)</option>
+      <option value="area-desc">Área: maior primeiro</option>
+    </select>
+    <button class="btn btn-ghost" id="btnExcel">📊 Exportar Excel</button>
+    <button class="btn btn-ghost" id="btnVisitasTxt">📋 Baixar visitas (.txt)</button>
+    <button class="btn btn-primary" id="btnNovo">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Novo apartamento
+    </button>
+  </div>
+
+  <div class="grid" id="cardsGrid"></div>
+  <div class="empty" id="emptyState" style="display:none;">
+    <h3>Nenhum apartamento por aqui</h3>
+    <p>Ajuste a busca/filtro ou cadastre um novo lead.</p>
+  </div>
+</main>
+
+<footer class="appfoot">
+  <span id="storageStatus">☁️ Dados e fotos sincronizados em tempo real (Firebase) — visível para quem tiver o link do site.</span>
+  <span><a id="btnExport">Exportar backup (.json)</a> · <a id="btnImport">Importar backup</a> · <a id="btnReset">Restaurar planilha original</a></span>
+</footer>
+
+<input type="file" id="fileImport" accept="application/json" style="display:none">
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Novo apartamento</h2>
+      <button class="close-x" id="btnClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label for="f_capa">Foto de capa</label>
+        <img id="coverPreview" class="cover-preview" alt="Prévia da foto de capa">
+        <div class="cover-tools">
+          <input type="file" id="f_capa" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.heic,.heif,.jfif">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRemoveCover" style="display:none;">Remover foto</button>
+        </div>
+        <span class="hint">A imagem é comprimida e salva na nuvem (visível para quem tiver este link).</span>
+      </div>
+      <div class="form-row">
+        <label for="f_bairro">Bairro *</label>
+        <input type="text" id="f_bairro" placeholder="Ex: Buritis">
+      </div>
+      <div class="form-row two">
+        <div class="form-row">
+          <label for="f_quartos">Quartos</label>
+          <input type="number" id="f_quartos" min="0" placeholder="Ex: 3">
+        </div>
+        <div class="form-row">
+          <label for="f_area">Área (m²)</label>
+          <input type="number" id="f_area" min="0" placeholder="Ex: 65">
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="f_valor">Valor (R$)</label>
+        <input type="number" id="f_valor" min="0" placeholder="Ex: 320000">
+      </div>
+      <div class="form-row">
+        <label for="f_endereco">Endereço</label>
+        <textarea id="f_endereco" rows="2" placeholder="Rua, número, complemento, bairro..."></textarea>
+      </div>
+      <div class="form-row">
+        <label for="f_status">Status *</label>
+        <select id="f_status">
+          <option value="Em contato">Em contato</option>
+          <option value="Visita agendada">Visita agendada</option>
+          <option value="Visitado">Visitado</option>
+        </select>
+      </div>
+      <div class="form-row two">
+        <div class="form-row">
+          <label for="f_dataVisita">Data da visita</label>
+          <input type="date" id="f_dataVisita">
+        </div>
+        <div class="form-row">
+          <label for="f_horaVisita">Horário da visita</label>
+          <input type="time" id="f_horaVisita">
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="f_obs">Observações</label>
+        <textarea id="f_obs" rows="2" placeholder="Ex: REAGENDAR, falar com corretor, portaria..."></textarea>
+      </div>
+      <div class="form-row">
+        <label for="f_zap">Telefone / Zap</label>
+        <input type="text" id="f_zap" placeholder="Ex: 31 99999-9999">
+      </div>
+      <div class="form-row">
+        <label for="f_link">Link do anúncio</label>
+        <input type="url" id="f_link" placeholder="https://...">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvar">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAuCymnt-An58xAfsTCVRuB7jVWGCqnRDk",
+  authDomain: "apts-be705.firebaseapp.com",
+  projectId: "apts-be705",
+  storageBucket: "apts-be705.firebasestorage.app",
+  messagingSenderId: "142676356005",
+  appId: "1:142676356005:web:b5904c225b6a2a10d7564c",
+  measurementId: "G-VJBV7Y3R6G"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const leadsCol = collection(db, 'leads');
+const STORAGE_KEY = 'apto_leads_v1';
+
+const SEED_DATA = [{"bairro": "Estoril", "quartos": "", "area": "", "valor": 320000, "endereco": "Paulo Piedade Campos, 701 apto 104 bloco  - B  - Estoril", "status": "Visita agendada dia 14 as 14:30h", "zap": "31 9072-9363", "link": "https://app.imoview.com.br/AcessoExterno/VisualizarEmail?hash=71002B0045004F00520044007A006B00760059007200640056002B0032004A004D00720057007700660067003100380073003000430049005900360050006200"}, {"bairro": "Buritis", "quartos": 3, "area": 70, "valor": 350000, "endereco": "Rua Professora Bartira Mourão, 600 - Buritis, Belo Horizonte - MG", "status": "Agendado amanhã dia 14 as 1 5 30", "zap": "31 9669-9267", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-3-quartos-buritis-belo-horizonte-mg-70m2-id-2893762386/?source=ranking%2Crp"}, {"bairro": "Sagrada Família", "quartos": 3, "area": 65, "valor": 300000, "endereco": " EndereçoRua Mário de Andrade Gomes, 119\nComplementoApto 107 Bl.01", "status": "Agendado Amanha dia 14 as 9:30h", "zap": "31 93501-3640", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-3-quartos-sagrada-familia-belo-horizonte-65m2-id-2896610753/?source=ranking%2Crp"}, {"bairro": "Havaí", "quartos": "", "area": "", "valor": 320000, "endereco": "Rua Jamil Farah, 590 - Havaí", "status": "Visita agendada dia 14 as 16h", "zap": "31 8623-4739", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-a-venda-no-havai-alternativa-inteligente-para-quem-quer-morar-perto-do-burit-1517282390?lis=listing_1001"}, {"bairro": "Caiçara", "quartos": "", "area": "", "valor": 275000, "endereco": "Rua vander Rodríguez de lima 171", "status": "Agendado amanhã dia 14 as 17h", "zap": "5 31 8861-9251", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-residencial-em-belo-horizonte-mg-caicara-adelaide-1505284069?lis=listing_1001"}, {"bairro": "Ouro Preto", "quartos": 2, "area": 45, "valor": 240000, "endereco": "Rua José Ribeiro Filho, 361 - Ouro Preto, Belo Horizonte - MG", "status": "Em contato no zap", "zap": "31 8857-7766", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-2-quartos-ouro-preto-belo-horizonte-mg-45m2-id-2886881673/?source=ranking%2Crp"}, {"bairro": "Ouro Preto", "quartos": 2, "area": 50, "valor": 320000, "endereco": "Ouro Preto, Belo Horizonte - MG", "status": "Em contato no zap", "zap": "31 9643-2426", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-2-quartos-com-area-de-servico-ouro-preto-belo-horizonte-mg-50m2-id-2857990067/?source=ranking%2Crp"}, {"bairro": "Santa Tereza", "quartos": 2, "area": 44, "valor": 315000, "endereco": "Rua Pouso Alegre - Santa Tereza, Belo Horizonte - MG", "status": "Em contato no zap", "zap": "55 31 95347-0837", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-2-quartos-com-area-de-servico-santa-tereza-belo-horizonte-44m2-id-2896930612/?source=ranking%2Crp"}, {"bairro": "Sagrada Família", "quartos": 3, "area": 49, "valor": 310000, "endereco": "Rua Mário de Andrade Gomes - Sagrada Família, Belo Horizonte - MG", "status": "Em contato no zap", "zap": "55 31 9236-0230", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-3-quartos-com-interfone-sagrada-familia-belo-horizonte-mg-49m2-id-2616419769/?source=ranking%2Crp"}, {"bairro": "Padre Eustáquio (Henrique Gorceix)", "quartos": 3, "area": 71, "valor": 320000, "endereco": "Rua Henrique Gorceix, 2130 - Padre Eustáquio, Belo Horizonte - MG", "status": "Em contato no zap", "zap": "55 31 8446-6898", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-3-quartos-padre-eustaquio-belo-horizonte-71m2-id-2885767292/?source=ranking%2Crp"}, {"bairro": "Caiçara (Jd. Montanhês / Henrique Gorceix)", "quartos": 3, "area": 65, "valor": 320000, "endereco": "Rua Henrique Gorceix - Caiçaras, Belo Horizonte - MG", "status": "Em contato no zap", "zap": "55 31 9901-6083", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-3-quartos-com-blindex-jardim-montanhes-belo-horizonte-65m2-id-2848973148/?source=ranking%2Crp"}, {"bairro": "Castelo", "quartos": "", "area": "", "valor": 330000, "endereco": " Rua Desembargador José Satyro n. 690 - ao lado da Pratique Academia", "status": "Em contato no zap", "zap": "(31) 99435-3006", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-do-lado-da-av-dos-engenheiros-1518419046?lis=listing_1001"}, {"bairro": "Castelo", "quartos": "", "area": "", "valor": 295000, "endereco": "", "status": "Em contato no zap", "zap": "(31) 3498-2426", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-a-venda-2-quartos-1-vaga-castelo-belo-horizonte-mg-1508998113?lis=listing_1001"}, {"bairro": "Castelo", "quartos": "", "area": "", "valor": 318000, "endereco": "", "status": "Em contato no zap", "zap": "(31) 3448-4848", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/venda-de-apartamento-em-belo-horizonte-mg-bairro-castelo-1341166343?lis=listing_1001"}, {"bairro": "Havaí", "quartos": "", "area": "", "valor": 320000, "endereco": "", "status": "Em contato no zap", "zap": "(31) 3377-0007", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-a-venda-3-quartos-1-vaga-estoril-belo-horizonte-mg-1523593993?lis=listing_1001"}, {"bairro": "Caiçara", "quartos": "", "area": "", "valor": 320000, "endereco": "", "status": "Em contato no zap", "zap": "31 99144.5045", "link": "http://v.imo.bi/ZYCf62VihLBtQ5"}, {"bairro": "Ouro preto", "quartos": "", "area": "", "valor": 339000, "endereco": "", "status": "Em contato no zap", "zap": "55 31 9061-5908", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-1519644973?lis=listing_1001"}, {"bairro": "Ouro Preto", "quartos": "", "area": "", "valor": 320000, "endereco": "", "status": "Em contato no zap", "zap": "(31) 3498-2426", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-a-venda-2-quartos-1-vaga-ouro-preto-belo-horizonte-mg-1461357702?lis=listing_1001"}, {"bairro": "Castelo", "quartos": "", "area": "", "valor": 300000, "endereco": "Rua Castelo da Beira n. 174, Castelo - ao lado do Superm. BH", "status": "Em contato no zap", "zap": "(31) 99435-3006", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-para-venda-e-locacao-castelo-belo-horizonte-mg-1525335579?lis=listing_1001"}, {"bairro": "Manacás", "quartos": "", "area": "", "valor": 330000, "endereco": "", "status": "Em contato no zap", "zap": "31 9841-2426", "link": "https://www.globalimoveis.net/imovel/apartamento-a-venda-2-quartos-1-suite-1-vaga-manacas-belo-horizonte-mg/2874"}, {"bairro": "Castelo", "quartos": 2, "area": 56, "valor": 320000, "endereco": "Rua Elson Nunes de Souza, 761 - Castelo, Belo Horizonte - MG", "status": "Em contato no zap", "zap": "55 31 3495-1000", "link": "https://www.zapimoveis.com.br/imovel/venda-apartamento-2-quartos-com-seguranca-interna-castelo-belo-horizonte-mg-56m2-id-2799684928/?source=ranking%2Crp"}, {"bairro": "Castelo", "quartos": "", "area": "", "valor": 320000, "endereco": "", "status": "Ainda não chamei", "zap": "", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-2-quartos-c-garagem-castelo-1513713029?lis=listing_1001"}, {"bairro": "Castelo", "quartos": "", "area": "", "valor": 270000, "endereco": "", "status": "Ainda não chamei", "zap": "", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-venda-no-bairro-castelo-1504221489?lis=listing_1001"}, {"bairro": "Castelo", "quartos": "", "area": "", "valor": 320000, "endereco": "", "status": "Ainda não chamei", "zap": "", "link": "https://mg.olx.com.br/belo-horizonte-e-regiao/imoveis/apartamento-de-2-quartos-castelo-48-m2-r-320-000-00-1481341262?lis=listing_1001"}, {"bairro": "Estoril", "quartos": "", "area": "", "valor": 315000, "endereco": "", "status": "Ainda não chamei", "zap": "", "link": "https://www.grimoveis.com.br/imovel/codigo/68007"}, {"bairro": "Coração eucasitico", "quartos": "", "area": "", "valor": "", "endereco": "", "status": "Ainda não chamei", "zap": "31 7596-1347", "link": "https://www.himoveis.com.br/detalhe-imovel/4337"}];
+
+// Fotos não usam o Storage (que agora exige cartão cadastrado no Firebase).
+// Em vez disso, comprimimos a foto em etapas até caber dentro do limite de
+// 1MB por documento do Firestore, e guardamos como texto (base64) no próprio
+// card, no campo "capaData".
+const MAX_DOC_BYTES = 900000; // margem de segurança abaixo do limite de 1MB do Firestore
+function compressImageToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = ()=>{ img.onload = ()=>{
+      const attempts = [
+        {maxDim:1000, quality:0.6},
+        {maxDim:800, quality:0.5},
+        {maxDim:640, quality:0.45},
+        {maxDim:480, quality:0.4},
+        {maxDim:360, quality:0.35},
+      ];
+      let result = null;
+      for(const a of attempts){
+        let {width,height} = img;
+        if(width>height && width>a.maxDim){ height=Math.round(height*a.maxDim/width); width=a.maxDim; }
+        else if(height>a.maxDim){ width=Math.round(width*a.maxDim/height); height=a.maxDim; }
+        const canvas=document.createElement('canvas');
+        canvas.width=width; canvas.height=height;
+        canvas.getContext('2d').drawImage(img,0,0,width,height);
+        const dataUrl = canvas.toDataURL('image/jpeg', a.quality);
+        if(dataUrl.length <= MAX_DOC_BYTES){ result = dataUrl; break; }
+        result = dataUrl; // guarda a menor tentativa mesmo que ainda grande, como fallback
+      }
+      if(result && result.length > MAX_DOC_BYTES){
+        reject(new Error('Imagem muito grande mesmo após compressão — tente uma foto menor'));
+      }else{
+        resolve(result);
+      }
+    }; img.onerror=reject; img.src=reader.result; };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Sincronização em tempo real: qualquer alteração de qualquer pessoa aparece
+// automaticamente pra todo mundo que estiver com a página aberta.
+let unsubscribeLeads = null;
+function watchLeads(onChange){
+  if(unsubscribeLeads) unsubscribeLeads();
+  unsubscribeLeads = onSnapshot(leadsCol, async (snapshot)=>{
+    if(snapshot.empty && !window.__seeded){
+      window.__seeded = true;
+      await seedInitialData();
+      return;
+    }
+    const arr = snapshot.docs.map(d=>({ id: d.id, ...d.data() }));
+    onChange(arr);
+  }, (err)=>{
+    console.error('Erro ao sincronizar com o Firebase', err);
+    toast('Erro de sincronização: ' + (err?.message || err));
+  });
+}
+async function seedInitialData(){
+  const seeded = SEED_DATA.map((d,i)=>({ id: 'seed-'+i, createdAt: Date.now()-((SEED_DATA.length-i)*1000), ...d }));
+  for(const item of seeded){
+    const { id, ...rest } = item;
+    await setDoc(doc(leadsCol, id), rest);
+  }
+}
+async function saveLead(id, fields){
+  await setDoc(doc(leadsCol, id), fields, { merge: true });
+}
+async function deleteLead(id){
+  await deleteDoc(doc(leadsCol, id));
+}
+
+let data = [];
+function normalizeStatusBootstrap(raw){ const s=raw||''; return /visitado/i.test(s) ? 'Visitado' : (/agend/i.test(s) ? 'Visita agendada' : 'Em contato'); }
+function inferTimeBootstrap(raw){ const m=(raw||'').match(/(?:as|às)\s*(\d{1,2})\s*[: ]\s*(\d{2})|(?:as|às)\s*(\d{1,2})h/i); if(!m)return ''; return `${String(m[1]||m[3]).padStart(2,'0')}:${String(m[2]||'00').padStart(2,'0')}`; }
+function inferDateBootstrap(raw){ const m=(raw||'').match(/dia\s*(\d{1,2})/i); if(!m)return ''; const now=new Date(),day=Number(m[1]); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; }
+let editingId = null;
+let activeStatusFilter = null;
+let pendingCover = null; // null=manter atual, Blob=nova foto, ''=remover
+let pendingCoverPreviewUrl = null;
+
+const STAGES = [
+  {key:'contato', label:'Em contato', match: s => /contato/i.test(s), badge:'badge-amber'},
+  {key:'agendada', label:'Visita agendada', match: s => /agend/i.test(s), badge:'badge-blue'},
+  {key:'visitado', label:'Visitado', match: s => /visitado/i.test(s), badge:'badge-green'},
+];
+function classifyStatus(statusRaw){
+  const s = (statusRaw||'').trim();
+  if(!s) return {label:'Sem status', badge:'badge-gray'};
+  for(const st of STAGES){ if(st.match(s)) return {label: s, badge: st.badge, key: st.key}; }
+  return {label: s, badge:'badge-gray'};
+}
+
+function fmtMoney(v){
+  const n = Number(v);
+  if(!v && v!==0) return '—';
+  if(isNaN(n)) return v;
+  return n.toLocaleString('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits:0});
+}
+function onlyDigits(s){ return (s||'').replace(/\D/g,''); }
+function waLink(zap){
+  let digits = onlyDigits(zap);
+  if(!digits) return null;
+  if(digits.length <= 11) digits = '55'+digits; // assume BR, add country code
+  return 'https://wa.me/'+digits;
+}
+
+function renderStats(){
+  const counts = {};
+  STAGES.forEach(s=>counts[s.key]=0);
+  let semStatus = 0;
+  data.forEach(d=>{
+    const c = classifyStatus(d.status);
+    if(c.key) counts[c.key] = (counts[c.key]||0)+1;
+    else semStatus++;
+  });
+  const bar = document.getElementById('statsBar');
+  const items = [
+    {key:null, label:'Total', num: data.length},
+    ...STAGES.map(s=>({key:s.key, label:s.label, num: counts[s.key]||0})),
+  ];
+  bar.innerHTML = items.map(it => `
+    <div class="stat ${activeStatusFilter===it.key ? 'active':''}" data-key="${it.key ?? ''}">
+      <div class="stat-num">${it.num}</div>
+      <div class="stat-label">${it.label}</div>
+    </div>
+  `).join('');
+  bar.querySelectorAll('.stat').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const k = el.dataset.key || null;
+      activeStatusFilter = (activeStatusFilter === k) ? null : k;
+      render();
+    });
+  });
+}
+
+function getFiltered(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  let list = data.filter(d=>{
+    if(activeStatusFilter){
+      const c = classifyStatus(d.status);
+      if(c.key !== activeStatusFilter) return false;
+    }
+    if(!q) return true;
+    const hay = Object.values(d).map(v=>v ?? '').join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  const sort = document.getElementById('sortSelect').value;
+  list = list.slice();
+  if(sort==='valor-asc') list.sort((a,b)=>(Number(a.valor)||Infinity)-(Number(b.valor)||Infinity));
+  else if(sort==='valor-desc') list.sort((a,b)=>(Number(b.valor)||-Infinity)-(Number(a.valor)||-Infinity));
+  else if(sort==='bairro') list.sort((a,b)=>(a.bairro||'').localeCompare(b.bairro||'','pt-BR'));
+  else if(sort==='area-desc') list.sort((a,b)=>(Number(b.area)||-Infinity)-(Number(a.area)||-Infinity));
+  else list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  return list;
+}
+
+function render(){
+  renderStats();
+  const grid = document.getElementById('cardsGrid');
+  const empty = document.getElementById('emptyState');
+  const list = getFiltered();
+  if(list.length===0){
+    grid.innerHTML=''; empty.style.display='block'; return;
+  }
+  empty.style.display='none';
+  grid.innerHTML = list.map(d=>{
+    const c = classifyStatus(d.status);
+    const wa = waLink(d.zap);
+    return `
+    <div class="card" data-id="${d.id}">
+      ${d.capaData ? `<img class="card-cover" src="${escapeAttr(d.capaData)}" alt="Foto de ${escapeAttr(d.bairro||'apartamento')}">` : ''}
+      <div class="card-top">
+        <div class="bairro">${escapeHtml(d.bairro)||'Sem bairro'}</div>
+        <div class="valor">${fmtMoney(d.valor)}</div>
+      </div>
+      <div class="meta-row">
+        ${d.quartos ? `<span>🛏 ${escapeHtml(String(d.quartos))} qts</span>` : ''}
+        ${d.area ? `<span>📐 ${escapeHtml(String(d.area))} m²</span>` : ''}
+      </div>
+      ${d.endereco ? `<div class="endereco">📍 ${escapeHtml(d.endereco)}</div>` : ''}
+      <span class="badge ${c.badge}">${escapeHtml(c.label)}</span>
+      <div class="card-actions">
+        ${wa ? `<a class="icon-link wa" href="${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+        ${d.link ? `<a class="icon-link" href="${escapeAttr(d.link)}" target="_blank" rel="noopener">🔗 Anúncio</a>` : ''}
+        <span class="spacer"></span>
+        <button class="icon-btn" title="Editar" data-action="edit" data-id="${d.id}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="icon-btn danger" title="Excluir" data-action="delete" data-id="${d.id}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('[data-action="edit"]').forEach(b=>b.addEventListener('click', ()=>openModal(b.dataset.id)));
+  grid.querySelectorAll('[data-action="delete"]').forEach(b=>b.addEventListener('click', ()=>deleteItem(b.dataset.id)));
+}
+
+function escapeHtml(s){ return (s===undefined||s===null)?'':String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+// Modal handling
+const overlay = document.getElementById('overlay');
+function openModal(id){
+  editingId = id || null;
+  const item = id ? data.find(d=>d.id===id) : null;
+  document.getElementById('modalTitle').textContent = item ? 'Editar apartamento' : 'Novo apartamento';
+  pendingCover = null;
+  document.getElementById('f_capa').value = '';
+  updateCoverPreview(item?.capaData || '');
+  document.getElementById('f_bairro').value = item?.bairro || '';
+  document.getElementById('f_quartos').value = item?.quartos ?? '';
+  document.getElementById('f_area').value = item?.area ?? '';
+  document.getElementById('f_valor').value = item?.valor ?? '';
+  document.getElementById('f_endereco').value = item?.endereco || '';
+  document.getElementById('f_status').value = normalizeStatus(item?.status);
+  document.getElementById('f_dataVisita').value = item?.dataVisita || inferDate(item?.status) || '';
+  document.getElementById('f_horaVisita').value = item?.horaVisita || inferTime(item?.status) || '';
+  document.getElementById('f_obs').value = item?.obs || '';
+  document.getElementById('f_zap').value = item?.zap || '';
+  document.getElementById('f_link').value = item?.link || '';
+  overlay.classList.add('open');
+  setTimeout(()=>document.getElementById('f_bairro').focus(), 50);
+}
+function updateCoverPreview(src){
+  const img=document.getElementById('coverPreview');
+  const btn=document.getElementById('btnRemoveCover');
+  if(src){ img.src=src; img.style.display='block'; btn.style.display='inline-flex'; }
+  else{ img.removeAttribute('src'); img.style.display='none'; btn.style.display='none'; }
+}
+
+document.getElementById('f_capa').addEventListener('change', async (e)=>{
+  const file=e.target.files?.[0];
+  if(!file) return;
+  try{
+    toast('Comprimindo imagem...');
+    // Comprimimos a foto e guardamos como texto (base64) na nuvem compartilhada,
+    // já que o armazenamento em nuvem só aceita texto/JSON (limite de 5MB por item).
+    const dataUrl = await compressImageToDataURL(file);
+    pendingCover = dataUrl;
+    updateCoverPreview(dataUrl);
+    toast('Imagem pronta para salvar');
+  }catch(err){
+    console.error('Erro ao preparar imagem',err); toast('Não foi possível processar esta imagem'); e.target.value='';
+  }
+});
+
+document.getElementById('btnRemoveCover').addEventListener('click', ()=>{
+  pendingCover='';
+  document.getElementById('f_capa').value='';
+  updateCoverPreview('');
+});
+
+function closeModal(){ overlay.classList.remove('open'); editingId=null; pendingCover=null; if(pendingCoverPreviewUrl){URL.revokeObjectURL(pendingCoverPreviewUrl);pendingCoverPreviewUrl=null;} }
+
+document.getElementById('btnNovo').addEventListener('click', ()=>openModal(null));
+document.getElementById('btnClose').addEventListener('click', closeModal);
+document.getElementById('btnCancel').addEventListener('click', closeModal);
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && overlay.classList.contains('open')) closeModal(); });
+
+document.getElementById('btnSalvar').addEventListener('click', async ()=>{
+  const bairro = document.getElementById('f_bairro').value.trim();
+  if(!bairro){ toast('Informe ao menos o bairro'); document.getElementById('f_bairro').focus(); return; }
+  const payload = {
+    bairro,
+    quartos: document.getElementById('f_quartos').value,
+    area: document.getElementById('f_area').value,
+    valor: document.getElementById('f_valor').value,
+    endereco: document.getElementById('f_endereco').value.trim(),
+    status: document.getElementById('f_status').value,
+    dataVisita: document.getElementById('f_dataVisita').value,
+    horaVisita: document.getElementById('f_horaVisita').value,
+    obs: document.getElementById('f_obs').value.trim(),
+    zap: document.getElementById('f_zap').value.trim(),
+    link: document.getElementById('f_link').value.trim(),
+  };
+  const targetId = editingId || ('id-'+Date.now()+'-'+Math.random().toString(36).slice(2,7));
+  if(!editingId) payload.createdAt = Date.now();
+  try{
+    if(pendingCover===''){
+      payload.capaData = '';
+    }else if(typeof pendingCover==='string' && pendingCover.startsWith('data:')){
+      payload.capaData = pendingCover;
+    }
+    await saveLead(targetId, payload);
+    toast(editingId ? 'Apartamento atualizado' : 'Apartamento adicionado');
+  }catch(err){
+    console.error('Erro ao salvar',err);
+    toast('Erro ao salvar: ' + (err?.message || err));
+    return;
+  }
+  closeModal();
+});
+
+async function deleteItem(id){
+  const item = data.find(d=>d.id===id);
+  if(!item) return;
+  if(!confirm(`Excluir o apartamento em "${item.bairro||'sem bairro'}"?`)) return;
+  try{
+    await deleteLead(id);
+    toast('Apartamento excluído');
+  }catch(err){
+    console.error('Erro ao excluir',err);
+    toast('Erro ao excluir: ' + (err?.message || err));
+  }
+}
+
+document.getElementById('searchInput').addEventListener('input', render);
+document.getElementById('sortSelect').addEventListener('change', render);
+
+// Normalização dos status antigos e utilitários
+function normalizeStatus(raw){
+  const s=(raw||'').toLowerCase();
+  if(/visitado/.test(s)) return 'Visitado';
+  return /agend/.test(s) ? 'Visita agendada' : 'Em contato';
+}
+function inferTime(raw){
+  const m=(raw||'').match(/(?:as|às)\s*(\d{1,2})\s*[: ]\s*(\d{2})|(?:as|às)\s*(\d{1,2})h/i);
+  if(!m) return '';
+  const h=String(m[1]||m[3]).padStart(2,'0'), min=String(m[2]||'00').padStart(2,'0');
+  return `${h}:${min}`;
+}
+function inferDate(raw){
+  const m=(raw||'').match(/dia\s*(\d{1,2})/i);
+  if(!m) return '';
+  const now=new Date(), day=Number(m[1]);
+  const dt=new Date(now.getFullYear(),now.getMonth(),day);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+function formatVisitDate(v){
+  if(!v) return '';
+  const [y,m,d]=v.split('-'); return `${d}/${m}/${y}`;
+}
+function csvCell(v){
+  const x=String(v??'').replace(/"/g,'""'); return `"${x}"`;
+}
+function downloadBlob(content,type,name){
+  const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnExcel').addEventListener('click', ()=>{
+  const cols=['Bairro','Quartos','Área (m²)','Valor (R$)','Endereço','Status','Data da visita','Horário da visita','Telefone / Zap','Link','Observações','ID','Criado em'];
+  const rows=data.map(d=>[d.bairro,d.quartos,d.area,d.valor,d.endereco,normalizeStatus(d.status),d.dataVisita||inferDate(d.status),d.horaVisita||inferTime(d.status),d.zap,d.link,d.obs||'',d.id,d.createdAt?new Date(d.createdAt).toLocaleString('pt-BR'):'']);
+  // CSV UTF-8 com BOM abre diretamente no Excel e mantém acentos.
+  const csv='\uFEFF'+[cols,...rows].map(r=>r.map(csvCell).join(';')).join('\r\n');
+  downloadBlob(csv,'text/csv;charset=utf-8;','controle-apartamentos.csv');
+  toast('Arquivo para Excel exportado');
+});
+
+document.getElementById('btnVisitasTxt').addEventListener('click', ()=>{
+  const visits=data.filter(d=>normalizeStatus(d.status)==='Visita agendada')
+    .map(d=>({...d,dataVisita:d.dataVisita||inferDate(d.status),horaVisita:d.horaVisita||inferTime(d.status)}))
+    .sort((a,b)=>(a.dataVisita||'9999').localeCompare(b.dataVisita||'9999') || (a.horaVisita||'99:99').localeCompare(b.horaVisita||'99:99'));
+  if(!visits.length){ toast('Nenhuma visita agendada'); return; }
+  const groups={}; visits.forEach(v=>{ const k=v.dataVisita||'sem-data'; (groups[k] ||= []).push(v); });
+  let txt='';
+  Object.entries(groups).forEach(([date,items],gi)=>{
+    const day=date==='sem-data'?'SEM DATA':String(Number(date.split('-')[2]));
+    if(gi) txt+='\r\n\r\n';
+    txt+=`📋 VISITAS AGENDADAS — DIA ${day}\r\n`;
+    items.forEach((d,i)=>{
+      const obs=d.obs ? ` - ${d.obs}` : '';
+      txt+=`🏠 ${d.bairro||'Sem bairro'}${d.horaVisita ? ` — ${d.horaVisita}h` : ''}${obs}\r\n`;
+      if(d.endereco) txt+=`📍 ${d.endereco.replace(/\s*\n\s*/g,', ')}\r\n`;
+      if(d.zap) txt+=`📱 ${d.zap}\r\n`;
+      if(d.link) txt+=`🔗 ${d.link}\r\n`;
+      if(i<items.length-1) txt+='\r\n';
+    });
+  });
+  downloadBlob(txt,'text/plain;charset=utf-8;','visitas-agendadas.txt');
+  toast('Mensagem de visitas baixada');
+});
+
+// Backup / restore
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'apartamentos-backup.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup exportado');
+});
+document.getElementById('btnImport').addEventListener('click', ()=>document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    try{
+      const imported = JSON.parse(reader.result);
+      if(!Array.isArray(imported)) throw new Error('formato inválido');
+      for(let i=0;i<imported.length;i++){
+        const d = imported[i];
+        const id = d.id || ('imp-'+Date.now()+'-'+i);
+        const { id: _drop, ...fields } = d;
+        fields.createdAt = fields.createdAt || Date.now();
+        await setDoc(doc(leadsCol, id), fields, { merge: true });
+      }
+      toast('Backup importado com sucesso');
+    }catch(err){ console.error(err); toast('Arquivo inválido: ' + (err?.message||err)); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+document.getElementById('btnReset').addEventListener('click', async ()=>{
+  if(!confirm('Isso substitui todos os leads atuais pelos dados originais da planilha. Continuar?')) return;
+  try{
+    for(const item of data){ await deleteDoc(doc(leadsCol, item.id)); }
+    await seedInitialData();
+    toast('Dados restaurados da planilha original');
+  }catch(err){ console.error(err); toast('Erro ao restaurar: ' + (err?.message||err)); }
+});
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 4500);
+}
+
+function init(){
+  const grid = document.getElementById('cardsGrid');
+  grid.innerHTML = '<div class="empty"><h3>Conectando...</h3><p>Sincronizando com o banco de dados na nuvem.</p></div>';
+  watchLeads((arr)=>{
+    data = arr.map(d=>({ ...d, status: normalizeStatusBootstrap(d.status), dataVisita: d.dataVisita || inferDateBootstrap(d.status), horaVisita: d.horaVisita || inferTimeBootstrap(d.status), obs: d.obs || '' }));
+    render();
+  });
+}
+init();
+</script>
+</body>
+</html>
