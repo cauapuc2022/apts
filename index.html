@@ -297,7 +297,13 @@
     <div>
       <h2>Controle de Gastos</h2>
     </div>
-    <button class="btn" style="background:var(--navy);color:#fff" id="btnNovoGasto">＋ Novo gasto</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn" style="background:#1d6f42;color:#fff;display:inline-flex;align-items:center;gap:7px" id="btnExcelGastos" title="Baixar todos os gastos em Excel">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" fill="#fff"/><path d="M8 8l8 8M16 8l-8 8" stroke="#1d6f42" stroke-width="2.2" stroke-linecap="round"/></svg>
+        Baixar Excel
+      </button>
+      <button class="btn" style="background:var(--navy);color:#fff" id="btnNovoGasto">＋ Novo gasto</button>
+    </div>
   </div>
 
   <div class="gastos-cards">
@@ -1038,6 +1044,45 @@ $g('tabGastos').addEventListener('click',()=>setActiveTab('gastos'));
 // Aba inicial: GASTOS.
 setActiveTab('gastos');
 $g('btnNovoGasto').onclick=()=>openGasto();
+
+// Exportar TODOS os gastos salvos (ignora filtros) para Excel
+$g('btnExcelGastos').onclick=async()=>{
+  if(!gastosData.length){ toast('Não há gastos para exportar'); return; }
+  const rows=[...gastosData]
+    .sort((a,b)=>(b.data||'').localeCompare(a.data||''))
+    .map(g=>({
+      'Data':gDateFmt(g.data),
+      'Nome do gasto':g.nome||'',
+      'Categoria':g.categoria||'',
+      'Descrição':g.descricao||'',
+      'Valor (R$)':Number(g.valor||0)
+    }));
+  const stamp=new Date().toISOString().slice(0,10);
+  try{
+    if(!window.XLSX){
+      await new Promise((ok,fail)=>{
+        const sc=document.createElement('script');
+        sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        sc.onload=ok; sc.onerror=fail; document.head.appendChild(sc);
+      });
+    }
+    const ws=XLSX.utils.json_to_sheet(rows);
+    ws['!cols']=[{wch:12},{wch:30},{wch:18},{wch:40},{wch:14}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Gastos');
+    XLSX.writeFile(wb,`gastos-${stamp}.xlsx`);
+    toast('Excel baixado');
+  }catch(err){
+    // Plano B: CSV (abre no Excel)
+    const head=Object.keys(rows[0]);
+    const esc=v=>`"${String(v).replace(/"/g,'""')}"`;
+    const csv='\uFEFF'+[head.map(esc).join(';'),...rows.map(r=>head.map(h=>esc(r[h])).join(';'))].join('\r\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download=`gastos-${stamp}.csv`; a.click(); URL.revokeObjectURL(a.href);
+    toast('Baixado em CSV (abre no Excel)');
+  }
+};
 $g('gClose').onclick=closeGasto;
 $g('gCancel').onclick=closeGasto;
 $g('gSave').onclick=saveGasto;
