@@ -226,12 +226,41 @@
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   /* ===== ABA GASTOS — adicionada sem alterar o sistema original ===== */
-  .app-tabs{max-width:1180px;margin:0 auto;padding:0 28px 18px;display:flex;gap:8px;flex-wrap:wrap}
-  .app-tab{border:1px solid var(--line);background:var(--white);color:var(--navy);padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer}
-  .app-tab.active{background:var(--navy);color:var(--white)}
+  .app-tabs{
+    max-width:1180px;
+    margin:0 auto;
+    padding:8px 28px 0;
+    display:flex;
+    gap:4px;
+    align-items:flex-end;
+    position:relative;
+    z-index:5;
+  }
+  .app-tab{
+    border:1px solid var(--line);
+    border-bottom:none;
+    background:#E8E5DE;
+    color:var(--navy);
+    padding:9px 18px 10px;
+    border-radius:9px 9px 0 0;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    box-shadow:0 -1px 2px rgba(30,42,47,.04);
+    position:relative;
+    top:1px;
+  }
+  .app-tab:hover{background:#F8F6F1}
+  .app-tab.active{
+    background:var(--navy);
+    color:var(--white);
+    border-color:var(--navy);
+    box-shadow:none;
+  }
   .app-panel{display:none}
   .app-panel.active{display:block}
-  #gastosPanel{max-width:1180px;margin:0 auto;padding:0 28px 40px}
+  #visitasPanel{display:block}
+  #gastosPanel{max-width:1180px;margin:0 auto;padding:28px 28px 40px}
   .gastos-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
   .gastos-head h2{font-family:'Fraunces',serif;color:var(--navy);margin:0;font-size:26px}
   .gastos-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
@@ -267,6 +296,12 @@
 <body>
 <div class="bg-grid"></div>
 
+<div class="app-tabs">
+  <button class="app-tab active" id="tabVisitas">Visitas</button>
+  <button class="app-tab" id="tabGastos">Gastos</button>
+</div>
+
+<div id="visitasPanel"> 
 <header class="top">
   <div class="eyebrow">Caça ao apê — Belo Horizonte</div>
   <h1>Controle de Visitas</h1>
@@ -275,10 +310,38 @@
   <div class="stats" id="statsBar"></div>
 </header>
 
+<main>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="searchInput" placeholder="Buscar em todos os dados do card: bairro, número, link, observações...">
+    </div>
+    <select id="sortSelect">
+      <option value="recent">Mais recentes</option>
+      <option value="valor-asc">Valor: menor primeiro</option>
+      <option value="valor-desc">Valor: maior primeiro</option>
+      <option value="bairro">Bairro (A–Z)</option>
+      <option value="area-desc">Área: maior primeiro</option>
+    </select>
+    <button class="btn btn-ghost" id="btnExcel">📊 Exportar Excel</button>
+    <button class="btn btn-ghost" id="btnVisitasTxt">📋 Baixar visitas (.txt)</button>
+    <button class="btn btn-primary" id="btnNovo">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Novo apartamento
+    </button>
+  </div>
 
-<div class="app-tabs">
-  <button class="app-tab active" id="tabVisitas">Visitas</button>
-  <button class="app-tab" id="tabGastos">Gastos</button>
+  <div class="grid" id="cardsGrid"></div>
+  <div class="empty" id="emptyState" style="display:none;">
+    <h3>Nenhum apartamento por aqui</h3>
+    <p>Ajuste a busca/filtro ou cadastre um novo lead.</p>
+  </div>
+</main>
+
+<footer class="appfoot">
+  <span id="storageStatus">☁️ Dados e fotos sincronizados em tempo real (Firebase) — visível para quem tiver o link do site.</span>
+  <span><a id="btnExport">Exportar backup (.json)</a> · <a id="btnImport">Importar backup</a> · <a id="btnReset">Restaurar planilha original</a></span>
+</footer>
 </div>
 
 <section id="gastosPanel" class="app-panel">
@@ -334,39 +397,6 @@
   </div>
 </div>
 <datalist id="gCatList"><option value="Material"><option value="Mão de obra"><option value="Ferramentas"><option value="Transporte"><option value="Alimentação"><option value="Serviços"><option value="Outros"></datalist>
-
-<main>
-  <div class="toolbar">
-    <div class="search-wrap">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="search" id="searchInput" placeholder="Buscar em todos os dados do card: bairro, número, link, observações...">
-    </div>
-    <select id="sortSelect">
-      <option value="recent">Mais recentes</option>
-      <option value="valor-asc">Valor: menor primeiro</option>
-      <option value="valor-desc">Valor: maior primeiro</option>
-      <option value="bairro">Bairro (A–Z)</option>
-      <option value="area-desc">Área: maior primeiro</option>
-    </select>
-    <button class="btn btn-ghost" id="btnExcel">📊 Exportar Excel</button>
-    <button class="btn btn-ghost" id="btnVisitasTxt">📋 Baixar visitas (.txt)</button>
-    <button class="btn btn-primary" id="btnNovo">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-      Novo apartamento
-    </button>
-  </div>
-
-  <div class="grid" id="cardsGrid"></div>
-  <div class="empty" id="emptyState" style="display:none;">
-    <h3>Nenhum apartamento por aqui</h3>
-    <p>Ajuste a busca/filtro ou cadastre um novo lead.</p>
-  </div>
-</main>
-
-<footer class="appfoot">
-  <span id="storageStatus">☁️ Dados e fotos sincronizados em tempo real (Firebase) — visível para quem tiver o link do site.</span>
-  <span><a id="btnExport">Exportar backup (.json)</a> · <a id="btnImport">Importar backup</a> · <a id="btnReset">Restaurar planilha original</a></span>
-</footer>
 
 <input type="file" id="fileImport" accept="application/json" style="display:none">
 
@@ -1009,15 +1039,15 @@ async function deleteGasto(id){
 }
 
 $g('tabVisitas').addEventListener('click',()=>{
-  $g('tabVisitas').classList.add('active'); $g('tabGastos').classList.remove('active');
+  $g('tabVisitas').classList.add('active');
+  $g('tabGastos').classList.remove('active');
+  $g('visitasPanel').style.display='block';
   $g('gastosPanel').classList.remove('active');
-  document.querySelector('main').style.display='';
-  document.querySelector('footer.appfoot').style.display='';
 });
 $g('tabGastos').addEventListener('click',()=>{
-  $g('tabGastos').classList.add('active'); $g('tabVisitas').classList.remove('active');
-  document.querySelector('main').style.display='none';
-  document.querySelector('footer.appfoot').style.display='none';
+  $g('tabGastos').classList.add('active');
+  $g('tabVisitas').classList.remove('active');
+  $g('visitasPanel').style.display='none';
   $g('gastosPanel').classList.add('active');
   renderGastos();
 });
