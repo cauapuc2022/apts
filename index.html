@@ -241,10 +241,22 @@
   .gastos-field{display:flex;flex-direction:column;gap:5px;min-width:150px;flex:1}
   .gastos-field label{font-size:11px}
   .gastos-field input,.gastos-field select{width:100%;border:1px solid var(--line);background:#fff;padding:9px;border-radius:7px;font:inherit;color:var(--ink)}
-  .gastos-table-wrap{overflow:auto;background:var(--white);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
-  .gastos-table{width:100%;border-collapse:collapse;min-width:850px}
-  .gastos-table th,.gastos-table td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
-  .gastos-table th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#667579;background:var(--paper-2)}
+  .gastos-table-wrap{background:transparent;border:none;box-shadow:none;overflow:visible}
+  .gastos-table{width:100%;border-collapse:separate;border-spacing:0;min-width:0;display:block}
+  .gastos-table thead{display:none}
+  .gastos-table tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .gastos-table tr{display:flex;flex-direction:column;gap:8px;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:16px;box-shadow:var(--shadow);min-width:0}
+  .gastos-table td{padding:0;border:none;text-align:left;font-size:13px;display:block;overflow-wrap:anywhere}
+  .gastos-table td::before{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#667579;margin-bottom:3px;font-weight:600}
+  .gastos-table td:nth-child(1)::before{content:"Data"}
+  .gastos-table td:nth-child(2)::before{content:"Nome do gasto"}
+  .gastos-table td:nth-child(3)::before{content:"Categoria"}
+  .gastos-table td:nth-child(4)::before{content:"Descrição"}
+  .gastos-table td:nth-child(5)::before{content:"Valor"}
+  .gastos-table td:nth-child(6)::before{content:"Ações"}
+  .gastos-table td:nth-child(2) strong{font-size:16px;color:var(--navy)}
+  .gastos-table td:nth-child(5){font-size:17px}
+  .gastos-table td:nth-child(6){padding-top:5px;border-top:1px dashed var(--line)}
   .gasto-actions{display:flex;gap:5px}
   .gasto-btn{border:1px solid var(--line);background:#fff;padding:7px 9px;border-radius:6px;cursor:pointer;font-weight:600}
   .gasto-btn.danger{color:var(--red)}
