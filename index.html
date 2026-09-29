@@ -224,6 +224,44 @@
     box-shadow:0 10px 30px rgba(0,0,0,.25); z-index:100;
   }
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ===== ABA GASTOS — adicionada sem alterar o sistema original ===== */
+  .app-tabs{max-width:1180px;margin:0 auto;padding:0 28px 18px;display:flex;gap:8px;flex-wrap:wrap}
+  .app-tab{border:1px solid var(--line);background:var(--white);color:var(--navy);padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer}
+  .app-tab.active{background:var(--navy);color:var(--white)}
+  .app-panel{display:none}
+  .app-panel.active{display:block}
+  #gastosPanel{max-width:1180px;margin:0 auto;padding:0 28px 40px}
+  .gastos-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .gastos-head h2{font-family:'Fraunces',serif;color:var(--navy);margin:0;font-size:26px}
+  .gastos-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .gasto-card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:15px;box-shadow:var(--shadow)}
+  .gasto-card small{color:#6b797c}.gasto-card strong{display:block;color:var(--navy);font-size:22px;margin-top:5px}
+  .gastos-tools{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:9px;align-items:end;flex-wrap:wrap}
+  .gastos-field{display:flex;flex-direction:column;gap:5px;min-width:150px;flex:1}
+  .gastos-field label{font-size:11px}
+  .gastos-field input,.gastos-field select{width:100%;border:1px solid var(--line);background:#fff;padding:9px;border-radius:7px;font:inherit;color:var(--ink)}
+  .gastos-table-wrap{overflow:auto;background:var(--white);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+  .gastos-table{width:100%;border-collapse:collapse;min-width:850px}
+  .gastos-table th,.gastos-table td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+  .gastos-table th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#667579;background:var(--paper-2)}
+  .gasto-actions{display:flex;gap:5px}
+  .gasto-btn{border:1px solid var(--line);background:#fff;padding:7px 9px;border-radius:6px;cursor:pointer;font-weight:600}
+  .gasto-btn.danger{color:var(--red)}
+  .gasto-money{font-weight:700;white-space:nowrap}
+  .gastos-modal{position:fixed;inset:0;background:rgba(20,28,30,.5);display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;z-index:200;overflow-y:auto}
+  .gastos-modal.open{display:flex}
+  .gastos-modal-box{background:var(--paper);border-radius:14px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.25);border:1px solid var(--line)}
+  .gastos-modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .gastos-modal-head h3{font-family:'Fraunces',serif;color:var(--navy);margin:0}
+  .gastos-form{padding:20px 22px;display:grid;gap:13px}
+  .gastos-form-row{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .gastos-form input,.gastos-form select,.gastos-form textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:7px;padding:10px;font:inherit}
+  .gastos-form textarea{min-height:85px;resize:vertical}
+  .gastos-form-foot{padding:15px 22px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+  @media(max-width:800px){.gastos-cards{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){.gastos-form-row{grid-template-columns:1fr}.gastos-cards{grid-template-columns:1fr 1fr}}
+
 </style>
 </head>
 <body>
@@ -236,6 +274,66 @@
 
   <div class="stats" id="statsBar"></div>
 </header>
+
+
+<div class="app-tabs">
+  <button class="app-tab active" id="tabVisitas">Visitas</button>
+  <button class="app-tab" id="tabGastos">Gastos</button>
+</div>
+
+<section id="gastosPanel" class="app-panel">
+  <div class="gastos-head">
+    <div>
+      <h2>Controle de Gastos</h2>
+      <div style="color:#6b797c;font-size:13px;margin-top:4px">Os gastos ficam salvos no mesmo banco Firebase do sistema.</div>
+    </div>
+    <button class="btn" style="background:var(--navy);color:#fff" id="btnNovoGasto">＋ Novo gasto</button>
+  </div>
+
+  <div class="gastos-cards">
+    <div class="gasto-card"><small>Total dos gastos</small><strong id="gTotal">R$ 0,00</strong></div>
+    <div class="gasto-card"><small>Gastos filtrados</small><strong id="gFiltered">R$ 0,00</strong></div>
+    <div class="gasto-card"><small>Quantidade</small><strong id="gCount">0</strong></div>
+    <div class="gasto-card"><small>Maior gasto</small><strong id="gLargest">R$ 0,00</strong></div>
+  </div>
+
+  <div class="gastos-tools">
+    <div class="gastos-field"><label>Buscar</label><input id="gSearch" placeholder="Nome, descrição ou categoria"></div>
+    <div class="gastos-field"><label>Categoria</label><select id="gCategory"><option value="">Todas</option></select></div>
+    <div class="gastos-field"><label>De</label><input id="gFrom" type="date"></div>
+    <div class="gastos-field"><label>Até</label><input id="gTo" type="date"></div>
+    <button class="gasto-btn" id="gClear">Limpar</button>
+  </div>
+
+  <div class="gastos-table-wrap">
+    <table class="gastos-table">
+      <thead><tr><th>Data</th><th>Nome do gasto</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead>
+      <tbody id="gTbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="gastos-modal" id="gModal">
+  <div class="gastos-modal-box">
+    <div class="gastos-modal-head"><h3 id="gModalTitle">Novo gasto</h3><button class="close-x" id="gClose">×</button></div>
+    <div class="gastos-form">
+      <div class="gastos-form-row">
+        <div><label>Nome do gasto *</label><input id="gName" placeholder="Ex.: Cimento"></div>
+        <div><label>Valor *</label><input id="gValue" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      </div>
+      <div class="gastos-form-row">
+        <div><label>Categoria</label><input id="gCat" list="gCatList" placeholder="Ex.: Material"></div>
+        <div><label>Data *</label><input id="gDate" type="date"></div>
+      </div>
+      <div><label>Descrição</label><textarea id="gDesc" placeholder="Detalhes do gasto..."></textarea></div>
+    </div>
+    <div class="gastos-form-foot">
+      <button class="gasto-btn" id="gCancel">Cancelar</button>
+      <button class="btn" style="background:var(--navy);color:#fff" id="gSave">Salvar gasto</button>
+    </div>
+  </div>
+</div>
+<datalist id="gCatList"><option value="Material"><option value="Mão de obra"><option value="Ferramentas"><option value="Transporte"><option value="Alimentação"><option value="Serviços"><option value="Outros"></datalist>
 
 <main>
   <div class="toolbar">
@@ -807,6 +905,140 @@ function init(){
   });
 }
 init();
+
+/* ============================================================
+   ABA GASTOS — extensão do sistema original
+   Mantém a coleção "leads" intacta e usa a coleção "gastos".
+   ============================================================ */
+const gastosCol = collection(db, 'gastos');
+let gastosData = [];
+let gastoEditingId = null;
+
+const $g = id => document.getElementById(id);
+const gMoney = v => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const gEsc = s => String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const gDateFmt = d => d ? d.split('-').reverse().join('/') : '';
+
+function getGastosFiltered(){
+  const q=$g('gSearch').value.trim().toLowerCase();
+  const cat=$g('gCategory').value, from=$g('gFrom').value, to=$g('gTo').value;
+  return gastosData.filter(g=>{
+    const text=`${g.nome||''} ${g.descricao||''} ${g.categoria||''}`.toLowerCase();
+    return (!q||text.includes(q))&&(!cat||g.categoria===cat)&&(!from||g.data>=from)&&(!to||g.data<=to);
+  }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+}
+
+function renderGastos(){
+  const list=getGastosFiltered();
+  const total=gastosData.reduce((s,g)=>s+Number(g.valor||0),0);
+  const filtered=list.reduce((s,g)=>s+Number(g.valor||0),0);
+  $g('gTotal').textContent=gMoney(total);
+  $g('gFiltered').textContent=gMoney(filtered);
+  $g('gCount').textContent=list.length;
+  $g('gLargest').textContent=gMoney(Math.max(0,...gastosData.map(g=>Number(g.valor||0))));
+
+  const cats=[...new Set(gastosData.map(g=>g.categoria).filter(Boolean))].sort();
+  const current=$g('gCategory').value;
+  $g('gCategory').innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${gEsc(c)}">${gEsc(c)}</option>`).join('');
+  if(cats.includes(current)) $g('gCategory').value=current;
+
+  $g('gTbody').innerHTML=list.length?list.map(g=>`
+    <tr>
+      <td>${gDateFmt(g.data)}</td>
+      <td><strong>${gEsc(g.nome)}</strong></td>
+      <td>${gEsc(g.categoria||'-')}</td>
+      <td>${gEsc(g.descricao||'-')}</td>
+      <td class="gasto-money">${gMoney(g.valor)}</td>
+      <td><div class="gasto-actions">
+        <button class="gasto-btn" data-g-edit="${g.id}">Editar</button>
+        <button class="gasto-btn danger" data-g-del="${g.id}">Excluir</button>
+      </div></td>
+    </tr>`).join(''):`<tr><td colspan="6" style="text-align:center;padding:40px;color:#899496">Nenhum gasto encontrado.</td></tr>`;
+
+  document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>openGasto(b.dataset.gEdit));
+  document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>deleteGasto(b.dataset.gDel));
+}
+
+function openGasto(id=null){
+  const g=id?gastosData.find(x=>x.id===id):null;
+  gastoEditingId=g?.id||null;
+  $g('gModalTitle').textContent=g?'Editar gasto':'Novo gasto';
+  $g('gName').value=g?.nome||'';
+  $g('gValue').value=g?.valor??'';
+  $g('gCat').value=g?.categoria||'';
+  $g('gDate').value=g?.data||new Date().toISOString().slice(0,10);
+  $g('gDesc').value=g?.descricao||'';
+  $g('gModal').classList.add('open');
+  $g('gName').focus();
+}
+function closeGasto(){ $g('gModal').classList.remove('open'); gastoEditingId=null; }
+
+async function saveGasto(){
+  const nome=$g('gName').value.trim();
+  const valor=Number($g('gValue').value);
+  const data=$g('gDate').value;
+  if(!nome||!valor||valor<0||!data){ alert('Preencha nome, valor e data.'); return; }
+  const id=gastoEditingId||('gasto-'+Date.now()+'-'+Math.random().toString(36).slice(2,8));
+  const fields={
+    nome, valor,
+    categoria:$g('gCat').value.trim()||'Outros',
+    data,
+    descricao:$g('gDesc').value.trim(),
+    atualizadoEm:Date.now()
+  };
+  try{
+    await setDoc(doc(gastosCol,id),fields,{merge:true});
+    closeGasto();
+    toast('Gasto salvo no Firebase');
+  }catch(err){
+    console.error(err);
+    toast('Erro ao salvar gasto: '+(err?.message||err));
+  }
+}
+
+async function deleteGasto(id){
+  const g=gastosData.find(x=>x.id===id);
+  if(!g||!confirm(`Excluir o gasto "${g.nome}"?`)) return;
+  try{
+    await deleteDoc(doc(gastosCol,id));
+    toast('Gasto excluído');
+  }catch(err){
+    console.error(err);
+    toast('Erro ao excluir gasto: '+(err?.message||err));
+  }
+}
+
+$g('tabVisitas').addEventListener('click',()=>{
+  $g('tabVisitas').classList.add('active'); $g('tabGastos').classList.remove('active');
+  $g('gastosPanel').classList.remove('active');
+  document.querySelector('main').style.display='';
+  document.querySelector('footer.appfoot').style.display='';
+});
+$g('tabGastos').addEventListener('click',()=>{
+  $g('tabGastos').classList.add('active'); $g('tabVisitas').classList.remove('active');
+  document.querySelector('main').style.display='none';
+  document.querySelector('footer.appfoot').style.display='none';
+  $g('gastosPanel').classList.add('active');
+  renderGastos();
+});
+$g('btnNovoGasto').onclick=()=>openGasto();
+$g('gClose').onclick=closeGasto;
+$g('gCancel').onclick=closeGasto;
+$g('gSave').onclick=saveGasto;
+$g('gModal').onclick=e=>{if(e.target===$g('gModal'))closeGasto()};
+['gSearch','gFrom','gTo'].forEach(id=>$g(id).addEventListener('input',renderGastos));
+$g('gCategory').addEventListener('change',renderGastos);
+$g('gClear').onclick=()=>{
+  $g('gSearch').value='';$g('gCategory').value='';$g('gFrom').value='';$g('gTo').value='';renderGastos();
+};
+
+onSnapshot(gastosCol,snap=>{
+  gastosData=snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderGastos();
+},err=>{
+  console.error('Firebase gastos:',err);
+});
+
 </script>
 </body>
 </html>
