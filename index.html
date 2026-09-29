@@ -943,7 +943,6 @@ function renderGastos(){
   const filtered=list.reduce((s,g)=>s+Number(g.valor||0),0);
   $g('gTotal').textContent=gMoney(total);
   $g('gFiltered').textContent=gMoney(filtered);
-  $g('gCount').textContent=list.length;
   $g('gLargest').textContent=gMoney(Math.max(0,...gastosData.map(g=>Number(g.valor||0))));
 
   const cats=[...new Set(gastosData.map(g=>g.categoria).filter(Boolean))].sort();
