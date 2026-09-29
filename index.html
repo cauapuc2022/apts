@@ -936,13 +936,15 @@ function getGastosFiltered(){
   }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
 }
 
+function setG(id,txt){ const el=$g(id); if(el) el.textContent=txt; }
+
 function renderGastos(){
   const list=getGastosFiltered();
   const total=gastosData.reduce((s,g)=>s+Number(g.valor||0),0);
   const filtered=list.reduce((s,g)=>s+Number(g.valor||0),0);
-  $g('gTotal').textContent=gMoney(total);
-  $g('gFiltered').textContent=gMoney(filtered);
-  $g('gLargest').textContent=gMoney(Math.max(0,...gastosData.map(g=>Number(g.valor||0))));
+  setG('gTotal',gMoney(total));
+  setG('gFiltered',gMoney(filtered));
+  setG('gLargest',gMoney(Math.max(0,...gastosData.map(g=>Number(g.valor||0)))));
 
   const cats=[...new Set(gastosData.map(g=>g.categoria).filter(Boolean))].sort();
   const current=$g('gCategory').value;
