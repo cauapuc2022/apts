@@ -252,11 +252,12 @@
   .gastos-table td:nth-child(2)::before{content:"Nome do gasto"}
   .gastos-table td:nth-child(3)::before{content:"Categoria"}
   .gastos-table td:nth-child(4)::before{content:"Descrição"}
-  .gastos-table td:nth-child(5)::before{content:"Valor"}
-  .gastos-table td:nth-child(6)::before{content:"Ações"}
+  .gastos-table td:nth-child(5)::before{content:"Método de pagamento"}
+  .gastos-table td:nth-child(6)::before{content:"Valor"}
+  .gastos-table td:nth-child(7)::before{content:"Ações"}
   .gastos-table td:nth-child(2) strong{font-size:16px;color:var(--navy)}
-  .gastos-table td:nth-child(5){font-size:17px}
-  .gastos-table td:nth-child(6){padding-top:5px;border-top:1px dashed var(--line)}
+  .gastos-table td:nth-child(6){font-size:17px}
+  .gastos-table td:nth-child(7){padding-top:5px;border-top:1px dashed var(--line)}
   .gasto-actions{display:flex;gap:5px}
   .gasto-btn{border:1px solid var(--line);background:#fff;padding:7px 9px;border-radius:6px;cursor:pointer;font-weight:600}
   .gasto-btn.danger{color:var(--red)}
@@ -320,7 +321,7 @@
   </div>
 
   <div class="gastos-tools">
-    <div class="gastos-field"><label>Buscar</label><input id="gSearch" placeholder="Nome, descrição ou categoria"></div>
+    <div class="gastos-field"><label>Buscar</label><input id="gSearch" placeholder="Nome, descrição, categoria ou pagamento"></div>
     <div class="gastos-field"><label>Categoria</label><select id="gCategory"><option value="">Todas</option></select></div>
     <div class="gastos-field"><label>De</label><input id="gFrom" type="date"></div>
     <div class="gastos-field"><label>Até</label><input id="gTo" type="date"></div>
@@ -329,7 +330,7 @@
 
   <div class="gastos-table-wrap">
     <table class="gastos-table">
-      <thead><tr><th>Data</th><th>Nome do gasto</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Data</th><th>Nome do gasto</th><th>Categoria</th><th>Descrição</th><th>Método de pagamento</th><th>Valor</th><th>Ações</th></tr></thead>
       <tbody id="gTbody"></tbody>
     </table>
   </div>
@@ -347,6 +348,7 @@
         <div><label>Categoria</label><input id="gCat" list="gCatList" placeholder="Ex.: Material"></div>
         <div><label>Data *</label><input id="gDate" type="date"></div>
       </div>
+      <div><label>Método de pagamento</label><input id="gPayment" type="text" placeholder="Ex.: PIX, cartão, boleto, dinheiro, transferência..."></div>
       <div><label>Descrição</label><textarea id="gDesc" placeholder="Detalhes do gasto..."></textarea></div>
       <div class="gasto-upload-box">
         <label for="gFiles">Anexos</label>
@@ -998,7 +1000,7 @@ function getGastosFiltered(){
   const q=$g('gSearch').value.trim().toLowerCase();
   const cat=$g('gCategory').value, from=$g('gFrom').value, to=$g('gTo').value;
   return gastosData.filter(g=>{
-    const text=`${g.nome||''} ${g.descricao||''} ${g.categoria||''}`.toLowerCase();
+    const text=`${g.nome||''} ${g.descricao||''} ${g.categoria||''} ${g.metodoPagamento||''}`.toLowerCase();
     return (!q||text.includes(q))&&(!cat||g.categoria===cat)&&(!from||g.data>=from)&&(!to||g.data<=to);
   }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
 }
@@ -1024,12 +1026,13 @@ function renderGastos(){
       <td><strong>${gEsc(g.nome)}</strong></td>
       <td>${gEsc(g.categoria||'-')}</td>
       <td>${gEsc(g.descricao||'-')}${(g.arquivos||[]).length?`<div class="gasto-files">${g.arquivos.map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name" title="${gEsc(f.name)}">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button data-g-download="${g.id}" data-file-id="${f.id}">Abrir</button></div>`).join('')}</div>`:''}</td>
+      <td>${gEsc(g.metodoPagamento||'-')}</td>
       <td class="gasto-money">${gMoney(g.valor)}</td>
       <td><div class="gasto-actions">
         <button class="gasto-btn" data-g-edit="${g.id}">Editar</button>
         <button class="gasto-btn danger" data-g-del="${g.id}">Excluir</button>
       </div></td>
-    </tr>`).join(''):`<tr><td colspan="6" style="text-align:center;padding:40px;color:#899496">Nenhum gasto encontrado.</td></tr>`;
+    </tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:40px;color:#899496">Nenhum gasto encontrado.</td></tr>`;
 
   document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>openGasto(b.dataset.gEdit));
   document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>deleteGasto(b.dataset.gDel));
@@ -1044,6 +1047,7 @@ function openGasto(id=null){
   $g('gValue').value=g?.valor??'';
   $g('gCat').value=g?.categoria||'';
   $g('gDate').value=g?.data||new Date().toISOString().slice(0,10);
+  $g('gPayment').value=g?.metodoPagamento||'';
   $g('gDesc').value=g?.descricao||'';
   gastoPendingFiles=[]; $g('gFiles').value=''; renderGastoFileEditors(g);
   $g('gModal').classList.add('open');
@@ -1079,6 +1083,7 @@ async function saveGasto(){
     nome, valor,
     categoria:$g('gCat').value.trim()||'Outros',
     data,
+    metodoPagamento:$g('gPayment').value.trim(),
     descricao:$g('gDesc').value.trim(),
     atualizadoEm:Date.now()
   };
@@ -1146,6 +1151,7 @@ $g('btnExcelGastos').onclick=async()=>{
       'Nome do gasto':g.nome||'',
       'Categoria':g.categoria||'',
       'Descrição':g.descricao||'',
+      'Método de pagamento':g.metodoPagamento||'',
       'Valor (R$)':Number(g.valor||0)
     }));
   const stamp=new Date().toISOString().slice(0,10);
