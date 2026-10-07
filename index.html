@@ -1196,33 +1196,27 @@ function calcular(overrides, M){
   const jurosCartao = schedCartao.slice(0, M).reduce((a,b)=&gt;a+b.juros, 0);
   const parcelaCartao = schedCartao.length ? schedCartao[0].parcela : 0;
 
-  // Custos que precisam de caixa durante a operação.
+  // Custos de aquisição e de carregamento mensal calculados aqui (antes do bloco do
+  // empréstimo) porque, no fluxo da operação, eles também entram na conta do que
+  // o próprio empréstimo precisa bancar.
   const itbi = compra * s.itbiPct/100;
   const custoCartorio = compra * (s.cartorioPct/100);
   const custosAquisicao = itbi + custoCartorio + s.taxasBancarias;
+  const custosMensais = (s.condominioMensal + s.iptuMensal + s.seguro) * M;
 
+  // O valor do empréstimo cobre a necessidade de caixa da operação até o mês da venda.
+  // necessidadeBase continua sendo entrada + reforma para preservar os demais cálculos econômicos.
+  const reformaLiquidaCartao = Math.max(s.valorReforma - cartaoValor, 0);
   const custoCondominio = s.condominioMensal * M;
   const custoIptu = s.iptuMensal * M;
   const custoSeguro = s.seguro * M;
-  const custosMensais = custoCondominio + custoIptu + custoSeguro;
 
-  // Parcelas do financiamento do imóvel e do cartão que vencem até o mês da venda
-  // também representam necessidade de caixa da operação.
-  const parcelasFinAteVenda = schedFin
-    .slice(0, Math.min(M, schedFin.length))
-    .reduce((a,b)=&gt;a+b.parcela, 0);
+  // Parcelas do financiamento do imóvel e do cartão que vencem até a venda.
+  // O próprio empréstimo ponte NÃO financia suas próprias parcelas/juros para evitar circularidade.
+  const parcelasFinAteVenda = schedFin.slice(0, Math.min(M, schedFin.length)).reduce((a,b)=&gt;a+b.parcela, 0);
+  const parcelasCartaoAteVenda = schedCartao.slice(0, Math.min(M, schedCartao.length)).reduce((a,b)=&gt;a+b.parcela, 0);
 
-  const parcelasCartaoAteVenda = schedCartao
-    .slice(0, Math.min(M, schedCartao.length))
-    .reduce((a,b)=&gt;a+b.parcela, 0);
-
-  // O empréstimo ponte passa a representar a necessidade de caixa da operação
-  // até a venda. A parte da reforma colocada no cartão não entra duas vezes:
-  // sai da reforma financiada pelo ponte, mas as parcelas do cartão que vencerem
-  // antes da venda entram como necessidade de caixa.
-  const reformaLiquidaCartao = Math.max(s.valorReforma - cartaoValor, 0);
-
-  const necessidadeBase =
+  const necessidadeEmprestimo =
     entrada +
     reformaLiquidaCartao +
     reserva +
@@ -1238,12 +1232,9 @@ function calcular(overrides, M){
 
   let aporte = 0;
   if (s.aporteCapitalEnabled){
-    aporte = Math.max(0, Math.min(s.aporteCapitalValor, necessidadeBase));
+    aporte = Math.max(0, Math.min(s.aporteCapitalValor, necessidadeEmprestimo));
   }
-
-  // Não adicionamos parcelas/juros do próprio empréstimo ponte ao principal,
-  // pois isso faria o empréstimo financiar a si mesmo e criaria cálculo circular.
-  const valorEmprestimo = Math.max(necessidadeBase - aporte, 0);
+  const valorEmprestimo = Math.max(necessidadeEmprestimo - aporte, 0);
 
   const schedEmp = gerarParcelasComCarenciaTotal(valorEmprestimo, taxaMensalEmp, s.prazoEmprestimo, s.sistemaAmortizacao, CARENCIA_PAGAMENTO_MESES);
 
@@ -1304,7 +1295,7 @@ function calcular(overrides, M){
   return {
     compra, valorVenda, entrada, valorFinanciado, valorEmprestimo, necessidadeBase, aporte,
     saldoFin, saldoEmp, jurosFin, jurosEmp, itbi, custoCartorio, custosAquisicao, reserva, custosMensais,
-    custoCondominio, custoIptu, custoSeguro, reformaLiquidaCartao, parcelasFinAteVenda, parcelasCartaoAteVenda,
+    necessidadeEmprestimo, reformaLiquidaCartao, custoCondominio, custoIptu, custoSeguro, parcelasFinAteVenda, parcelasCartaoAteVenda,
     corretagem, ganhoCapital, imposto, custoTotal, lucroLiquido, capitalProprio, roi, margem,
     retornoCompra, sobraFinal, custosOperacionais: custoTotal - compra, M,
     cartaoValor, saldoCartao, jurosCartao, parcelaCartao,
@@ -1955,44 +1946,35 @@ function renderLoanBreakdown(r){
 
   const items = [
     {label:&#x27;Entrada do imóvel&#x27;, detail:`${fmtPct(state.entradaPct,1)} do valor de compra`, value:r.entrada},
-    {label:&#x27;Reforma paga pelo empréstimo&#x27;, detail:&#x27;reforma menos a parcela colocada no cartão&#x27;, value:r.reformaLiquidaCartao},
-    {label:&#x27;Reserva de contingência&#x27;, detail:`${fmtPct(state.reservaContingenciaPct,1)} do valor da reforma`, value:r.reserva},
+    {label:&#x27;Reforma paga pelo empréstimo&#x27;, detail:&#x27;valor da reforma não coberto pelo cartão&#x27;, value:r.reformaLiquidaCartao},
+    {label:&#x27;Reserva de contingência&#x27;, detail:`${fmtPct(state.reservaContingenciaPct,1)} da reforma`, value:r.reserva},
     {label:&#x27;ITBI&#x27;, detail:`${fmtPct(state.itbiPct,1)} do valor de compra`, value:r.itbi},
-    {label:&#x27;Cartório&#x27;, detail:`${fmtPct(state.cartorioPct,1)} do valor de compra`, value:r.custoCartorio},
-    {label:&#x27;Taxas bancárias / aquisição&#x27;, detail:&#x27;valor informado nas premissas&#x27;, value:state.taxasBancarias},
+    {label:&#x27;Custos de cartório&#x27;, detail:`${fmtPct(state.cartorioPct,1)} do valor de compra`, value:r.custoCartorio},
+    {label:&#x27;Taxas bancárias&#x27;, detail:&#x27;valor informado nas premissas&#x27;, value:state.taxasBancarias},
     {label:&#x27;Despesas diversas&#x27;, detail:&#x27;valor informado nas premissas&#x27;, value:state.despesasDiversas},
     {label:&#x27;Condomínio até a venda&#x27;, detail:`${r.M} mês(es) × ${fmtBRL(state.condominioMensal)}`, value:r.custoCondominio},
     {label:&#x27;IPTU até a venda&#x27;, detail:`${r.M} mês(es) × ${fmtBRL(state.iptuMensal)}`, value:r.custoIptu},
     {label:&#x27;Seguro até a venda&#x27;, detail:`${r.M} mês(es) × ${fmtBRL(state.seguro)}`, value:r.custoSeguro},
-    {label:&#x27;Parcelas do financiamento do imóvel até a venda&#x27;, detail:&#x27;parcelas que efetivamente vencem antes da venda, respeitando a carência&#x27;, value:r.parcelasFinAteVenda},
-    {label:&#x27;Parcelas do cartão até a venda&#x27;, detail:&#x27;somente quando parte da reforma foi colocada no cartão&#x27;, value:r.parcelasCartaoAteVenda},
-    {label:&#x27;(-) Aporte de capital próprio&#x27;, detail:&#x27;valor próprio utilizado para reduzir a necessidade do empréstimo&#x27;, value:r.aporte, minus:true}
-  ];
+    {label:&#x27;Parcelas do financiamento até a venda&#x27;, detail:&#x27;parcelas que vencem até o mês selecionado para venda&#x27;, value:r.parcelasFinAteVenda},
+    {label:&#x27;Parcelas do cartão até a venda&#x27;, detail:&#x27;parcelas da reforma no cartão que vencem até a venda&#x27;, value:r.parcelasCartaoAteVenda},
+    {label:&#x27;Aporte de capital próprio&#x27;, detail:&#x27;reduz o valor necessário de empréstimo&#x27;, value:r.aporte, minus:true}
+  ].filter(it =&gt; Math.abs(Number(it.value) || 0) &gt; 0.005);
 
-  // Exibe SOMENTE o que realmente possui valor.
-  const lines = items.filter(it =&gt; Math.abs(Number(it.value) || 0) &gt; 0.005);
-
-  wrap.innerHTML = lines.map(it =&gt; `
+  wrap.innerHTML = items.map(it =&gt; `
     &lt;div class=&quot;loan-line ${it.minus?&#x27;minus&#x27;:&#x27;&#x27;}&quot;&gt;
-      &lt;div class=&quot;loan-line-label&quot;&gt;&lt;b&gt;${it.label}&lt;/b&gt;&lt;br&gt;${it.detail}&lt;/div&gt;
+      &lt;div class=&quot;loan-line-label&quot;&gt;&lt;b&gt;${it.minus?&#x27;(-) &#x27;:&#x27;&#x27;}${it.label}&lt;/b&gt;&lt;br&gt;${it.detail}&lt;/div&gt;
       &lt;div class=&quot;loan-line-value num&quot;&gt;${it.minus?&#x27;− &#x27;:&#x27;&#x27;}${fmtBRL(it.value)}&lt;/div&gt;
     &lt;/div&gt;
   `).join(&#x27;&#x27;);
 
   document.getElementById(&#x27;loanBreakdownTotal&#x27;).textContent = fmtBRL(r.valorEmprestimo);
 
-  const formula = lines.map((it, idx) =&gt; {
-    const nome = it.label.replace(&#x27;(-) &#x27;,&#x27;&#x27;);
-    if (idx === 0) return nome;
-    return `${it.minus ? &#x27;−&#x27; : &#x27;+&#x27;} ${nome}`;
-  }).join(&#x27; &#x27;);
-
+  const formula = items.map((it,i) =&gt; `${i===0?&#x27;&#x27;:(it.minus?&#x27;− &#x27;:&#x27;+ &#x27;)}${it.label}`).join(&#x27; &#x27;);
   document.getElementById(&#x27;loanBreakdownFormula&#x27;).innerHTML =
-    `&lt;b&gt;FÓRMULA APLICADA:&lt;/b&gt; ${formula || &#x27;Nenhum custo preenchido&#x27;} = &lt;b&gt;${fmtBRL(r.valorEmprestimo)}&lt;/b&gt;.`;
+    `&lt;b&gt;FÓRMULA APLICADA:&lt;/b&gt; ${formula || &#x27;Nenhum valor preenchido&#x27;} = &lt;b&gt;${fmtBRL(r.valorEmprestimo)}&lt;/b&gt;.`;
 
   document.getElementById(&#x27;loanBreakdownExcluded&#x27;).innerHTML =
-    `&lt;b&gt;Importante:&lt;/b&gt; o detalhamento acima mostra somente componentes com valor maior que zero. ` +
-    `As parcelas e os juros do próprio empréstimo ponte não são adicionados ao principal, evitando que o empréstimo financie a si mesmo e gere cálculo circular.`;
+    `&lt;b&gt;Observação:&lt;/b&gt; itens com valor R$ 0,00 não são exibidos. As parcelas e os juros do próprio empréstimo ponte não entram no principal para evitar cálculo circular.`;
 }
 
 function initLoanBreakdown(){
