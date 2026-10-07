@@ -338,7 +338,7 @@
 </section>
 
 <section id="simulacaoPanel" class="app-panel" style="max-width:none;padding:0 16px 40px;">
-  <iframe id="simulacaoFrame" title="SIMULAÇÃO" style="width:100%;height:calc(100vh - 110px);min-height:800px;border:0;border-radius:10px;background:#090b0f;display:block;" srcdoc="&lt;!DOCTYPE html&gt;
+  <iframe id="simulacaoFrame" title="SIMULAÇÃO" style="width:100%;height:auto;min-height:800px;border:0;border-radius:10px;background:#090b0f;display:block;overflow:hidden;" srcdoc="&lt;!DOCTYPE html&gt;
 &lt;html lang=&quot;pt-BR&quot;&gt;
 &lt;head&gt;
 &lt;meta charset=&quot;UTF-8&quot;&gt;
@@ -538,7 +538,7 @@ a{color:inherit;}
 .card-note{font-size:11.5px;color:var(--text-faint);line-height:1.6;}
 
 /* Inputs panel */
-.input-sections{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow-y:auto;overflow-x:hidden;padding-right:2px;min-width:0;}
+.input-sections{position:relative;top:auto;max-height:none;overflow:visible;padding-right:2px;min-width:0;}
 .input-group{border-bottom:1px solid var(--border-soft);}
 .input-group:last-child{border-bottom:none;}
 .input-group-head{
@@ -705,6 +705,32 @@ table.data-table td.label-cell{font-family:var(--sans);font-weight:600;color:var
 .mini-card-label{font-size:11px;color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
 
 footer.app-footer{max-width:1400px;margin:40px auto 0;padding:20px 32px;color:var(--text-faint);font-size:11.5px;border-top:1px solid var(--border-soft);}
+
+.loan-explain-btn{
+  width:100%;margin-top:10px;padding:10px 12px;border:1px solid rgba(124,140,255,.42);
+  border-radius:8px;background:rgba(124,140,255,.08);color:var(--accent);
+  font:700 11px/1.2 &#x27;JetBrains Mono&#x27;,monospace;letter-spacing:.04em;cursor:pointer;
+  transition:.18s ease;
+}
+.loan-explain-btn:hover{background:rgba(124,140,255,.15);border-color:rgba(124,140,255,.7);}
+.loan-breakdown{
+  display:none;margin-top:10px;padding:14px;border:1px solid var(--border);border-radius:9px;
+  background:rgba(255,255,255,.025);
+}
+.loan-breakdown.open{display:block;}
+.loan-breakdown-title{font-size:12px;font-weight:800;color:var(--text);margin-bottom:5px;}
+.loan-breakdown-sub{font-size:10px;line-height:1.55;color:var(--text-faint);margin-bottom:12px;}
+.loan-line{display:grid;grid-template-columns:1fr auto;gap:12px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.055);}
+.loan-line:last-child{border-bottom:0;}
+.loan-line-label{font-size:10px;line-height:1.4;color:var(--text-dim);}
+.loan-line-value{font-size:10px;font-weight:700;color:var(--text);white-space:nowrap;}
+.loan-line.minus .loan-line-value{color:var(--green);}
+.loan-total{margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,140,255,.35);display:flex;justify-content:space-between;gap:12px;align-items:flex-end;}
+.loan-total-label{font-size:10px;font-weight:800;color:var(--text);}
+.loan-total-value{font-size:15px;font-weight:800;color:var(--accent);}
+.loan-formula{margin-top:10px;padding:9px 10px;border-radius:7px;background:rgba(124,140,255,.07);font-size:9px;line-height:1.55;color:var(--text-dim);}
+.loan-not-included{margin-top:10px;font-size:9px;line-height:1.55;color:var(--text-faint);}
+
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -750,15 +776,7 @@ footer.app-footer{max-width:1400px;margin:40px auto 0;padding:20px 32px;color:va
   &lt;/div&gt;
 &lt;/div&gt;
 
-&lt;!-- ============================================================ TABS ============================================================ --&gt;
-&lt;div class=&quot;tabs&quot;&gt;
-  &lt;button class=&quot;tab-btn active&quot; data-tab=&quot;overview&quot;&gt;Visão Geral&lt;/button&gt;
-  &lt;button class=&quot;tab-btn&quot; data-tab=&quot;scenarios&quot;&gt;Cenários&lt;/button&gt;
-  &lt;button class=&quot;tab-btn&quot; data-tab=&quot;breakeven&quot;&gt;Ponto de Equilíbrio&lt;/button&gt;
-  &lt;button class=&quot;tab-btn&quot; data-tab=&quot;maxprice&quot;&gt;Preço Máximo de Compra&lt;/button&gt;
-&lt;/div&gt;
-
-&lt;!-- ============================================================ TAB: VISÃO GERAL ============================================================ --&gt;
+&lt;!-- VISÃO GERAL --&gt;
 &lt;div class=&quot;tab-panel active&quot; id=&quot;panel-overview&quot;&gt;
 &lt;div class=&quot;layout&quot;&gt;
 
@@ -835,6 +853,18 @@ footer.app-footer{max-width:1400px;margin:40px auto 0;padding:20px 32px;color:va
             &lt;label&gt;Valor do empréstimo &lt;span class=&quot;lock-badge&quot;&gt;CALC.&lt;/span&gt;&lt;/label&gt;
             &lt;div class=&quot;input-wrap readonly&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;disp_emprestimo&quot; readonly&gt;&lt;/div&gt;
             &lt;div class=&quot;hint&quot; style=&quot;margin-top:4px;&quot; id=&quot;hint_emprestimo&quot;&gt;= valor da reforma + valor da entrada&lt;/div&gt;
+            &lt;button type=&quot;button&quot; class=&quot;loan-explain-btn&quot; id=&quot;btnLoanExplain&quot;&gt;POR QUE ESTE VALOR DE EMPRÉSTIMO?&lt;/button&gt;
+            &lt;div class=&quot;loan-breakdown&quot; id=&quot;loanBreakdown&quot;&gt;
+              &lt;div class=&quot;loan-breakdown-title&quot;&gt;COMPOSIÇÃO EXATA DO EMPRÉSTIMO PONTE&lt;/div&gt;
+              &lt;div class=&quot;loan-breakdown-sub&quot;&gt;Este detalhamento usa exatamente a mesma fórmula da simulação e é atualizado automaticamente sempre que você altera uma premissa.&lt;/div&gt;
+              &lt;div id=&quot;loanBreakdownLines&quot;&gt;&lt;/div&gt;
+              &lt;div class=&quot;loan-total&quot;&gt;
+                &lt;div class=&quot;loan-total-label&quot;&gt;VALOR FINAL DO EMPRÉSTIMO&lt;/div&gt;
+                &lt;div class=&quot;loan-total-value num&quot; id=&quot;loanBreakdownTotal&quot;&gt;R$ 0,00&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;loan-formula&quot; id=&quot;loanBreakdownFormula&quot;&gt;&lt;/div&gt;
+              &lt;div class=&quot;loan-not-included&quot; id=&quot;loanBreakdownExcluded&quot;&gt;&lt;/div&gt;
+            &lt;/div&gt;
           &lt;/div&gt;
           &lt;div class=&quot;field-row&quot;&gt;
             &lt;div class=&quot;field&quot;&gt;
@@ -1015,162 +1045,11 @@ footer.app-footer{max-width:1400px;margin:40px auto 0;padding:20px 32px;color:va
       &lt;/div&gt;
     &lt;/div&gt;
 
-    &lt;!-- Gráficos --&gt;
-    &lt;div class=&quot;card&quot;&gt;
-      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Gráficos&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;card-body&quot;&gt;
-        &lt;div class=&quot;chart-grid&quot;&gt;
-          &lt;div&gt;
-            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;LUCRO LÍQUIDO POR MÊS DE VENDA&lt;/div&gt;
-            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartLucro&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
-          &lt;/div&gt;
-          &lt;div&gt;
-            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;ROI E MARGEM POR MÊS&lt;/div&gt;
-            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartRoiMargem&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
-          &lt;/div&gt;
-          &lt;div&gt;
-            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;DISTRIBUIÇÃO DE CUSTOS&lt;/div&gt;
-            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartCustos&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
-          &lt;/div&gt;
-          &lt;div&gt;
-            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;SALDO DEVEDOR AO LONGO DO TEMPO&lt;/div&gt;
-            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartSaldo&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
-          &lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
 
-    &lt;!-- Checklist --&gt;
-    &lt;div class=&quot;card&quot;&gt;
-      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Checklist da Operação&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;card-body&quot;&gt;
-        &lt;div class=&quot;checklist&quot; id=&quot;checklist&quot;&gt;&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-
-    &lt;!-- Score --&gt;
-    &lt;div class=&quot;card&quot;&gt;
-      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Score da Oportunidade&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;card-body&quot;&gt;
-        &lt;div class=&quot;score-wrap&quot;&gt;
-          &lt;div class=&quot;score-num num&quot; id=&quot;scoreNum&quot;&gt;0&lt;/div&gt;
-          &lt;div class=&quot;score-bar-track&quot;&gt;&lt;div class=&quot;score-bar-fill&quot; id=&quot;scoreBar&quot;&gt;&lt;/div&gt;&lt;/div&gt;
-          &lt;div class=&quot;num&quot; style=&quot;color:var(--text-faint);font-size:12px;&quot;&gt;/100&lt;/div&gt;
-        &lt;/div&gt;
-        &lt;div class=&quot;score-caption&quot; id=&quot;scoreCaption&quot;&gt;—&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-
-    &lt;!-- Conclusão --&gt;
-    &lt;div class=&quot;card&quot;&gt;
-      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Conclusão&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;card-body&quot;&gt;
-        &lt;div class=&quot;conclusion&quot; id=&quot;conclusionBox&quot;&gt;
-          &lt;div class=&quot;conclusion-title&quot; id=&quot;conclusionTitle&quot;&gt;—&lt;/div&gt;
-          &lt;div class=&quot;reason-list&quot; id=&quot;conclusionReasons&quot;&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
 
   &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-
-&lt;!-- ============================================================ TAB: CENÁRIOS ============================================================ --&gt;
-&lt;div class=&quot;tab-panel&quot; id=&quot;panel-scenarios&quot;&gt;
-  &lt;div class=&quot;layout&quot; style=&quot;grid-template-columns:1fr;&quot;&gt;
-    &lt;div&gt;
-      &lt;div class=&quot;section-intro&quot;&gt;
-        &lt;h2&gt;Cenários de venda — 1 a 6 meses&lt;/h2&gt;
-        &lt;p&gt;Compara a operação inteira, mês a mês, com todos os custos de carregamento e juros recalculados de forma independente para cada prazo. Use esta tabela para responder: &quot;quanto custa atrasar a venda?&quot;&lt;/p&gt;
-      &lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;
-        &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
-          &lt;div class=&quot;table-wrap&quot;&gt;
-            &lt;table class=&quot;data-table&quot; id=&quot;scenarioTable&quot;&gt;
-              &lt;thead&gt;
-                &lt;tr&gt;
-                  &lt;th&gt;Mês da venda&lt;/th&gt;
-                  &lt;th&gt;Lucro líquido&lt;/th&gt;
-                  &lt;th&gt;ROI&lt;/th&gt;
-                  &lt;th&gt;Margem&lt;/th&gt;
-                  &lt;th&gt;Saldo financiamento&lt;/th&gt;
-                  &lt;th&gt;Saldo empréstimo&lt;/th&gt;
-                  &lt;th&gt;Custos acumulados&lt;/th&gt;
-                &lt;/tr&gt;
-              &lt;/thead&gt;
-              &lt;tbody id=&quot;scenarioBody&quot;&gt;&lt;/tbody&gt;
-            &lt;/table&gt;
-          &lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;!-- ============================================================ TAB: PONTO DE EQUILÍBRIO ============================================================ --&gt;
-&lt;div class=&quot;tab-panel&quot; id=&quot;panel-breakeven&quot;&gt;
-  &lt;div class=&quot;layout&quot; style=&quot;grid-template-columns:1fr;&quot;&gt;
-    &lt;div&gt;
-      &lt;div class=&quot;section-intro&quot;&gt;
-        &lt;h2&gt;Ponto de equilíbrio&lt;/h2&gt;
-        &lt;p&gt;Preço mínimo de venda necessário, mantendo todas as demais premissas e o mês de venda selecionado no topo, para atingir cada nível de lucro. Calculado por busca numérica sobre a mesma engine de cálculo da Visão Geral — não é uma aproximação simplificada.&lt;/p&gt;
-      &lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;
-        &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
-          &lt;div class=&quot;table-wrap&quot;&gt;
-            &lt;table class=&quot;data-table&quot; id=&quot;breakevenTable&quot;&gt;
-              &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Objetivo&lt;/th&gt;&lt;th&gt;Preço mínimo de venda&lt;/th&gt;&lt;th&gt;Margem resultante&lt;/th&gt;&lt;th&gt;ROI resultante&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
-              &lt;tbody id=&quot;breakevenBody&quot;&gt;&lt;/tbody&gt;
-            &lt;/table&gt;
-          &lt;/div&gt;
-        &lt;/div&gt;
-        &lt;div class=&quot;card-body&quot; style=&quot;padding-top:0;&quot;&gt;
-          &lt;div class=&quot;formula-box&quot;&gt;
-            &lt;b&gt;Como é calculado:&lt;/b&gt; para cada meta de lucro L, resolvemos V (preço de venda) tal que
-            LucroLíquido(V) = V − CustoTotal(V) = L, onde CustoTotal inclui corretagem e imposto de ganho de capital
-            (ambos proporcionais a V). A busca é feita por bisseção sobre a função exata de cálculo do lucro, garantindo
-            precisão mesmo com termos percentuais sobre o preço de venda.
-          &lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;!-- ============================================================ TAB: PREÇO MÁXIMO DE COMPRA ============================================================ --&gt;
-&lt;div class=&quot;tab-panel&quot; id=&quot;panel-maxprice&quot;&gt;
-  &lt;div class=&quot;layout&quot; style=&quot;grid-template-columns:1fr;&quot;&gt;
-    &lt;div&gt;
-      &lt;div class=&quot;section-intro&quot;&gt;
-        &lt;h2&gt;Preço máximo de compra&lt;/h2&gt;
-        &lt;p&gt;Se você já sabe por quanto pretende vender o imóvel, esta tabela mostra o quanto pode pagar na compra hoje para preservar cada meta de lucro — mantendo entrada (%), reforma, o empréstimo que financia as duas, e demais custos como estão configurados na Visão Geral.&lt;/p&gt;
-      &lt;/div&gt;
-
-      &lt;div class=&quot;grid-3&quot; id=&quot;targetVendaInputs&quot;&gt;&lt;/div&gt;
-
-      &lt;div class=&quot;card&quot;&gt;
-        &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
-          &lt;div class=&quot;table-wrap&quot;&gt;
-            &lt;table class=&quot;data-table&quot; id=&quot;maxPriceTable&quot;&gt;
-              &lt;thead&gt;&lt;tr id=&quot;maxPriceHead&quot;&gt;&lt;/tr&gt;&lt;/thead&gt;
-              &lt;tbody id=&quot;maxPriceBody&quot;&gt;&lt;/tbody&gt;
-            &lt;/table&gt;
-          &lt;/div&gt;
-        &lt;/div&gt;
-        &lt;div class=&quot;card-body&quot; style=&quot;padding-top:0;&quot;&gt;
-          &lt;div class=&quot;formula-box&quot;&gt;
-            &lt;b&gt;Como é calculado:&lt;/b&gt; para cada par (Preço de venda alvo, Meta de lucro), resolvemos o valor de compra C
-            tal que LucroLíquido(C, V) = Meta, por bisseção sobre a engine exata (ITBI, financiamento, juros e imposto
-            escalam corretamente com C). Entrada é mantida no percentual configurado; empréstimo ponte permanece fixo.
-          &lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;
 
 &lt;script&gt;
 /* ================================================================
@@ -2051,26 +1930,79 @@ function exportarResumoTxt(){
   URL.revokeObjectURL(url);
 }
 
+
+function renderLoanBreakdown(r){
+  const wrap = document.getElementById(&#x27;loanBreakdownLines&#x27;);
+  if (!wrap) return;
+
+  const lines = [
+    {label:&#x27;Entrada do imóvel&#x27;, detail:`${fmtPct(state.entradaPct,1)} do valor de compra`, value:r.entrada, minus:false},
+    {label:&#x27;Valor da reforma&#x27;, detail:&#x27;valor informado nas premissas da reforma&#x27;, value:state.valorReforma, minus:false},
+  ];
+
+  if (r.cartaoValor &gt; 0){
+    lines.push({
+      label:&#x27;(-) Reforma financiada no cartão&#x27;,
+      detail:&#x27;esta parte da reforma já é coberta pelo cartão e, por isso, reduz o empréstimo ponte&#x27;,
+      value:r.cartaoValor,
+      minus:true
+    });
+  }
+
+  if (state.aporteCapitalEnabled &amp;&amp; r.aporte &gt; 0){
+    lines.push({
+      label:&#x27;(-) Aporte de capital próprio&#x27;,
+      detail:&#x27;capital próprio usado para reduzir a necessidade do empréstimo&#x27;,
+      value:r.aporte,
+      minus:true
+    });
+  }
+
+  wrap.innerHTML = lines.map(it =&gt; `
+    &lt;div class=&quot;loan-line ${it.minus?&#x27;minus&#x27;:&#x27;&#x27;}&quot;&gt;
+      &lt;div class=&quot;loan-line-label&quot;&gt;&lt;b&gt;${it.label}&lt;/b&gt;&lt;br&gt;${it.detail}&lt;/div&gt;
+      &lt;div class=&quot;loan-line-value num&quot;&gt;${it.minus?&#x27;− &#x27;:&#x27;&#x27;}${fmtBRL(it.value)}&lt;/div&gt;
+    &lt;/div&gt;
+  `).join(&#x27;&#x27;);
+
+  document.getElementById(&#x27;loanBreakdownTotal&#x27;).textContent = fmtBRL(r.valorEmprestimo);
+
+  const formulaParts = [&#x27;Entrada&#x27;, &#x27;+ Reforma&#x27;];
+  if (r.cartaoValor &gt; 0) formulaParts.push(&#x27;− Reforma no cartão&#x27;);
+  if (state.aporteCapitalEnabled &amp;&amp; r.aporte &gt; 0) formulaParts.push(&#x27;− Aporte próprio&#x27;);
+  document.getElementById(&#x27;loanBreakdownFormula&#x27;).innerHTML =
+    `&lt;b&gt;FÓRMULA APLICADA:&lt;/b&gt; ${formulaParts.join(&#x27; &#x27;)} = &lt;b&gt;${fmtBRL(r.valorEmprestimo)}&lt;/b&gt;.`;
+
+  document.getElementById(&#x27;loanBreakdownExcluded&#x27;).innerHTML =
+    `&lt;b&gt;O que NÃO está dentro deste empréstimo:&lt;/b&gt; reserva de contingência (${fmtBRL(r.reserva)}), ` +
+    `ITBI/cartório/taxas bancárias (${fmtBRL(r.custosAquisicao)}), despesas diversas (${fmtBRL(state.despesasDiversas)}), ` +
+    `condomínio/IPTU/seguro durante a operação (${fmtBRL(r.custosMensais)}) e parcelas/juros posteriores. ` +
+    `Pela lógica atual da simulação, esses valores entram no fluxo/custo da operação, mas não aumentam o principal inicial do empréstimo ponte.`;
+}
+
+function initLoanBreakdown(){
+  const btn = document.getElementById(&#x27;btnLoanExplain&#x27;);
+  const box = document.getElementById(&#x27;loanBreakdown&#x27;);
+  if (!btn || !box) return;
+  btn.addEventListener(&#x27;click&#x27;, ()=&gt;{
+    const open = box.classList.toggle(&#x27;open&#x27;);
+    btn.textContent = open ? &#x27;FECHAR DETALHAMENTO DO EMPRÉSTIMO&#x27; : &#x27;POR QUE ESTE VALOR DE EMPRÉSTIMO?&#x27;;
+  });
+}
+
 /* ================================================================
    RECALCULA TUDO
    ================================================================ */
 function recalcAll(){
   const r = calcular({}, state.mesVenda);
   renderComputedFields(r);
-  const statusInfo = renderHero(r);
+  renderHero(r);
   renderSummary(r);
   renderParcelas(r);
   renderWaterfall(r);
   renderFlow(r);
-  const costItems = renderCosts(r);
-  const checklistInfo = renderChecklistAndScore(r);
-  renderConclusion(r, statusInfo, checklistInfo);
-  updateCharts(costItems);
-
-  // Se as abas de análise já estiverem visíveis, mantém sincronizadas
-  if (document.getElementById(&#x27;panel-scenarios&#x27;).classList.contains(&#x27;active&#x27;)) renderScenarios();
-  if (document.getElementById(&#x27;panel-breakeven&#x27;).classList.contains(&#x27;active&#x27;)) renderBreakeven();
-  if (document.getElementById(&#x27;panel-maxprice&#x27;).classList.contains(&#x27;active&#x27;)) renderMaxPrice();
+  renderCosts(r);
+  renderLoanBreakdown(r);
 }
 
 /* ================================================================
@@ -2079,8 +2011,7 @@ function recalcAll(){
 document.addEventListener(&#x27;DOMContentLoaded&#x27;, ()=&gt;{
   initInputs();
   initMonthPills();
-  initTabs();
-  initCharts();
+  initLoanBreakdown();
   recalcAll();
 });
 &lt;/script&gt;
@@ -2975,6 +2906,38 @@ onSnapshot(gastosCol,snap=>{
     }
 })();
 </script>
+
+<script>
+(function(){
+  const frame = document.getElementById('simulacaoFrame');
+  if(!frame) return;
+  function resizeSimulation(){
+    try{
+      const d = frame.contentDocument;
+      if(!d) return;
+      const h = Math.max(
+        d.documentElement ? d.documentElement.scrollHeight : 0,
+        d.body ? d.body.scrollHeight : 0,
+        800
+      );
+      frame.style.height = (h + 12) + 'px';
+    }catch(e){}
+  }
+  frame.addEventListener('load', function(){
+    resizeSimulation();
+    try{
+      const d = frame.contentDocument;
+      const observer = new MutationObserver(resizeSimulation);
+      observer.observe(d.documentElement, {subtree:true, childList:true, attributes:true});
+      d.addEventListener('input', ()=>setTimeout(resizeSimulation,0));
+      d.addEventListener('click', ()=>setTimeout(resizeSimulation,30));
+    }catch(e){}
+    setTimeout(resizeSimulation,100);
+  });
+  window.addEventListener('resize', resizeSimulation);
+})();
+</script>
+
 </body>
 
 </html>
