@@ -261,6 +261,14 @@
   .gasto-btn{border:1px solid var(--line);background:#fff;padding:7px 9px;border-radius:6px;cursor:pointer;font-weight:600}
   .gasto-btn.danger{color:var(--red)}
   .gasto-money{font-weight:700;white-space:nowrap}
+  .gasto-files{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+  .gasto-file{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#faf9f5;font-size:12px}
+  .gasto-file-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gasto-file button{border:0;background:transparent;cursor:pointer;color:var(--navy-2);font-weight:700}
+  .gasto-file button.danger{color:var(--red)}
+  .gasto-upload-box{border:1px dashed var(--line);border-radius:8px;padding:12px;background:#fff}
+  .gasto-upload-box input[type=file]{width:100%}
+  .gasto-pending{display:grid;gap:5px;margin-top:8px;font-size:12px;color:#5B6A6E}
   .gastos-modal{position:fixed;inset:0;background:rgba(20,28,30,.5);display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;z-index:200;overflow-y:auto}
   .gastos-modal.open{display:flex}
   .gastos-modal-box{background:var(--paper);border-radius:14px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.25);border:1px solid var(--line)}
@@ -340,6 +348,13 @@
         <div><label>Data *</label><input id="gDate" type="date"></div>
       </div>
       <div><label>Descrição</label><textarea id="gDesc" placeholder="Detalhes do gasto..."></textarea></div>
+      <div class="gasto-upload-box">
+        <label for="gFiles">Anexos</label>
+        <input id="gFiles" type="file" multiple>
+        <div class="hint">Qualquer formato · até 20 MB por arquivo · você pode selecionar vários arquivos.</div>
+        <div id="gPendingFiles" class="gasto-pending"></div>
+        <div id="gExistingFiles" class="gasto-files"></div>
+      </div>
     </div>
     <div class="gastos-form-foot">
       <button class="gasto-btn" id="gCancel">Cancelar</button>
@@ -927,6 +942,52 @@ init();
 const gastosCol = collection(db, 'gastos');
 let gastosData = [];
 let gastoEditingId = null;
+let gastoPendingFiles = [];
+const GASTO_FILE_MAX_BYTES = 20 * 1024 * 1024; // 20 MB por arquivo
+const GASTO_CHUNK_RAW_BYTES = 500 * 1024; // blocos pequenos para ficar abaixo do limite do Firestore
+
+function gFormatBytes(bytes){
+  const n=Number(bytes||0);
+  if(n<1024) return n+' B';
+  if(n<1024*1024) return (n/1024).toFixed(1)+' KB';
+  return (n/(1024*1024)).toFixed(1)+' MB';
+}
+function gSafePart(s){ return String(s||'arquivo').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,80); }
+function gFileId(){ return 'f-'+Date.now()+'-'+Math.random().toString(36).slice(2,10); }
+function gReadSliceAsDataURL(blob){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(blob); }); }
+async function gSaveFileChunks(gastoId,file,fileId){
+  const total=Math.ceil(file.size/GASTO_CHUNK_RAW_BYTES);
+  for(let i=0;i<total;i++){
+    const blob=file.slice(i*GASTO_CHUNK_RAW_BYTES, Math.min(file.size,(i+1)*GASTO_CHUNK_RAW_BYTES));
+    const data=await gReadSliceAsDataURL(blob);
+    await setDoc(doc(gastosCol,`__filechunk__${gSafePart(gastoId)}__${gSafePart(fileId)}__${String(i).padStart(5,'0')}`),{
+      _type:'fileChunk',gastoId,fileId,index:i,total,data,atualizadoEm:Date.now()
+    });
+  }
+}
+async function gDeleteFileChunks(gastoId,fileId,total){
+  for(let i=0;i<Number(total||0);i++){
+    await deleteDoc(doc(gastosCol,`__filechunk__${gSafePart(gastoId)}__${gSafePart(fileId)}__${String(i).padStart(5,'0')}`));
+  }
+}
+async function gDownloadFile(gastoId,fileMeta){
+  try{
+    toast('Preparando anexo...');
+    const parts=[];
+    for(let i=0;i<fileMeta.chunks;i++){
+      const chunkId=`__filechunk__${gSafePart(gastoId)}__${gSafePart(fileMeta.id)}__${String(i).padStart(5,'0')}`;
+      const cached=gastoChunkCache.get(chunkId);
+      if(!cached?.data) throw new Error('Parte do arquivo ainda não sincronizou. Aguarde alguns segundos.');
+      const b64=String(cached.data).split(',')[1]||'';
+      const bin=atob(b64), arr=new Uint8Array(bin.length);
+      for(let j=0;j<bin.length;j++) arr[j]=bin.charCodeAt(j);
+      parts.push(arr);
+    }
+    const blob=new Blob(parts,{type:fileMeta.type||'application/octet-stream'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileMeta.name||'anexo'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1500); toast('Anexo baixado');
+  }catch(err){ console.error(err); toast('Erro ao abrir anexo: '+(err?.message||err)); }
+}
 
 const $g = id => document.getElementById(id);
 const gMoney = v => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -962,7 +1023,7 @@ function renderGastos(){
       <td>${gDateFmt(g.data)}</td>
       <td><strong>${gEsc(g.nome)}</strong></td>
       <td>${gEsc(g.categoria||'-')}</td>
-      <td>${gEsc(g.descricao||'-')}</td>
+      <td>${gEsc(g.descricao||'-')}${(g.arquivos||[]).length?`<div class="gasto-files">${g.arquivos.map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name" title="${gEsc(f.name)}">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button data-g-download="${g.id}" data-file-id="${f.id}">Abrir</button></div>`).join('')}</div>`:''}</td>
       <td class="gasto-money">${gMoney(g.valor)}</td>
       <td><div class="gasto-actions">
         <button class="gasto-btn" data-g-edit="${g.id}">Editar</button>
@@ -972,6 +1033,7 @@ function renderGastos(){
 
   document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>openGasto(b.dataset.gEdit));
   document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>deleteGasto(b.dataset.gDel));
+  document.querySelectorAll('[data-g-download]').forEach(b=>b.onclick=()=>{ const g=gastosData.find(x=>x.id===b.dataset.gDownload); const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.fileId); if(g&&f) gDownloadFile(g.id,f); });
 }
 
 function openGasto(id=null){
@@ -983,10 +1045,29 @@ function openGasto(id=null){
   $g('gCat').value=g?.categoria||'';
   $g('gDate').value=g?.data||new Date().toISOString().slice(0,10);
   $g('gDesc').value=g?.descricao||'';
+  gastoPendingFiles=[]; $g('gFiles').value=''; renderGastoFileEditors(g);
   $g('gModal').classList.add('open');
   $g('gName').focus();
 }
-function closeGasto(){ $g('gModal').classList.remove('open'); gastoEditingId=null; }
+function renderGastoFileEditors(g){
+  $g('gPendingFiles').innerHTML=gastoPendingFiles.map((f,i)=>`<div>＋ ${gEsc(f.name)} (${gFormatBytes(f.size)}) <button type="button" class="gasto-btn" data-pending-remove="${i}">remover</button></div>`).join('');
+  $g('gExistingFiles').innerHTML=(g?.arquivos||[]).map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button type="button" data-existing-open="${f.id}">Abrir</button><button type="button" class="danger" data-existing-remove="${f.id}">Excluir</button></div>`).join('');
+  document.querySelectorAll('[data-pending-remove]').forEach(b=>b.onclick=()=>{gastoPendingFiles.splice(Number(b.dataset.pendingRemove),1);renderGastoFileEditors(g);});
+  document.querySelectorAll('[data-existing-open]').forEach(b=>b.onclick=()=>{const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.existingOpen);if(f)gDownloadFile(g.id,f);});
+  document.querySelectorAll('[data-existing-remove]').forEach(b=>b.onclick=async()=>{
+    const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.existingRemove); if(!f||!confirm(`Excluir o anexo "${f.name}"?`))return;
+    try{ await gDeleteFileChunks(g.id,f.id,f.chunks); const arquivos=(g.arquivos||[]).filter(x=>x.id!==f.id); await setDoc(doc(gastosCol,g.id),{arquivos,atualizadoEm:Date.now()},{merge:true}); toast('Anexo excluído'); }catch(err){toast('Erro ao excluir anexo: '+(err?.message||err));}
+  });
+}
+function closeGasto(){ $g('gModal').classList.remove('open'); gastoEditingId=null; gastoPendingFiles=[]; }
+
+$g('gFiles').addEventListener('change',e=>{
+  const incoming=[...(e.target.files||[])];
+  const tooBig=incoming.filter(f=>f.size>GASTO_FILE_MAX_BYTES);
+  if(tooBig.length) toast(`Arquivo acima de 20 MB: ${tooBig[0].name}`);
+  gastoPendingFiles.push(...incoming.filter(f=>f.size<=GASTO_FILE_MAX_BYTES));
+  const g=gastoEditingId?gastosData.find(x=>x.id===gastoEditingId):null; renderGastoFileEditors(g); e.target.value='';
+});
 
 async function saveGasto(){
   const nome=$g('gName').value.trim();
@@ -1002,9 +1083,18 @@ async function saveGasto(){
     atualizadoEm:Date.now()
   };
   try{
+    const existing=gastoEditingId?gastosData.find(x=>x.id===gastoEditingId):null;
+    const arquivos=[...(existing?.arquivos||[])];
+    if(gastoPendingFiles.length) toast('Salvando gasto e anexos...');
+    for(const file of gastoPendingFiles){
+      const fileId=gFileId(), chunks=Math.ceil(file.size/GASTO_CHUNK_RAW_BYTES);
+      await gSaveFileChunks(id,file,fileId);
+      arquivos.push({id:fileId,name:file.name,type:file.type||'application/octet-stream',size:file.size,chunks,uploadedAt:Date.now()});
+    }
+    fields.arquivos=arquivos;
     await setDoc(doc(gastosCol,id),fields,{merge:true});
     closeGasto();
-    toast('Gasto salvo no Firebase');
+    toast('Gasto e anexos salvos');
   }catch(err){
     console.error(err);
     toast('Erro ao salvar gasto: '+(err?.message||err));
@@ -1015,8 +1105,9 @@ async function deleteGasto(id){
   const g=gastosData.find(x=>x.id===id);
   if(!g||!confirm(`Excluir o gasto "${g.nome}"?`)) return;
   try{
+    for(const f of (g.arquivos||[])) await gDeleteFileChunks(id,f.id,f.chunks);
     await deleteDoc(doc(gastosCol,id));
-    toast('Gasto excluído');
+    toast('Gasto e anexos excluídos');
   }catch(err){
     console.error(err);
     toast('Erro ao excluir gasto: '+(err?.message||err));
@@ -1093,8 +1184,12 @@ $g('gClear').onclick=()=>{
   $g('gSearch').value='';$g('gCategory').value='';$g('gFrom').value='';$g('gTo').value='';renderGastos();
 };
 
+const gastoChunkCache=new Map();
 onSnapshot(gastosCol,snap=>{
-  gastosData=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
+  gastoChunkCache.clear();
+  docs.filter(d=>d._type==='fileChunk').forEach(d=>gastoChunkCache.set(d.id,d));
+  gastosData=docs.filter(d=>d._type!=='fileChunk' && !d.id.startsWith('__filechunk__'));
   renderGastos();
 },err=>{
   console.error('Firebase gastos:',err);
