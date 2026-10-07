@@ -1285,25 +1285,6 @@ function gerarParcelasComCarenciaTotal(principal, taxaMensal, prazoMeses, sistem
   return arr;
 }
 
-// ---------- Resolve o empréstimo &quot;autofinanciado&quot; ----------
-// Usado quando NÃO há aporte de capital: o próprio empréstimo ponte precisa ser
-// grande o bastante para cobrir, além de entrada + reforma, também a soma das
-// parcelas do financiamento e das parcelas do próprio empréstimo pagas até o mês M.
-// Como aumentar o empréstimo aumenta sua própria parcela, é um cálculo circular —
-// resolvido aqui por bisseção (mesma técnica já usada nos outros solvers do arquivo).
-function resolverEmprestimoAutofinanciado(necessidadeBase, sumFinM, taxaMensalEmp, prazoEmprestimo, sistema, M){
-  let lo = necessidadeBase;
-  let hi = necessidadeBase * 6 + sumFinM * 20 + 3000000;
-  for (let i=0; i&lt;80; i++){
-    const mid = (lo+hi)/2;
-    const sched = gerarParcelasComCarenciaTotal(mid, taxaMensalEmp, prazoEmprestimo, sistema, CARENCIA_PAGAMENTO_MESES);
-    const sumEmpM = sched.slice(0, Math.min(M, sched.length)).reduce((a,b)=&gt;a+b.parcela, 0);
-    const necessario = necessidadeBase + sumFinM + sumEmpM;
-    if (mid &lt; necessario) lo = mid; else hi = mid;
-  }
-  return (lo+hi)/2;
-}
-
 // ---------- Engine principal: calcula a operação inteira para um mês M ----------
 // overrides permite recalcular com compra/venda hipotéticos (usado nos solvers)
 function calcular(overrides, M){
@@ -1339,7 +1320,7 @@ function calcular(overrides, M){
   const parcelaCartao = schedCartao.length ? schedCartao[0].parcela : 0;
 
   // Custos de aquisição e de carregamento mensal calculados aqui (antes do bloco do
-  // empréstimo) porque, no modo autofinanciado, eles também entram na conta do que
+  // empréstimo) porque, no fluxo da operação, eles também entram na conta do que
   // o próprio empréstimo precisa bancar.
   const itbi = compra * s.itbiPct/100;
   const custoCartorio = compra * (s.cartorioPct/100);
@@ -1417,7 +1398,7 @@ function calcular(overrides, M){
 
   // A &quot;sobra no bolso&quot; precisa refletir o resultado de caixa da operação INTEIRA, não só
   // o dia do fechamento, e precisa ser INDEPENDENTE de como entrada + reforma foram
-  // bancadas (aporte, empréstimo normal ou empréstimo autofinanciado) — a forma de
+  // bancadas (aporte, empréstimo normal ou empréstimo ponte) — a forma de
   // financiar isso é uma decisão de capitalProprio/ROI, não deve mudar o resultado
   // econômico da operação. Por isso descontamos necessidadeBase (entrada + reforma) no
   // lugar de valorEmprestimo: o valor cheio originalmente financiado (valorFinanciado)
@@ -1599,7 +1580,7 @@ function renderComputedFields(r){
   const cartaoTrecho = (state.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0) ? &#x27; − reforma no cartão&#x27; : &#x27;&#x27;;
   hint.textContent = (state.aporteCapitalEnabled
     ? &#x27;= valor da reforma + valor da entrada − aporte de capital&#x27;
-    : &#x27;= entrada + reforma + custos de aquisição + custos mensais + reserva + despesas diversas + parcelas do empréstimo, financiamento e cartão (100% autofinanciado, nada sai do seu bolso)&#x27;) + cartaoTrecho;
+    : &#x27;= entrada + reforma − aporte de capital; parcelas após os 90 dias são pagas pelo fluxo da operação&#x27;) + cartaoTrecho;
 }
 
 function renderSummary(r){
@@ -1653,7 +1634,7 @@ function renderWaterfall(r){
     [&#x27;(–) Financiamento (compra)&#x27;, -r.valorFinanciado, true,
       &#x27;Valor de compra menos Valor da entrada. É o financiamento total contratado para a compra do imóvel — inclui tanto as parcelas já pagas ao longo dos meses quanto o saldo devedor quitado na venda.&#x27;],
     [&#x27;(–) Entrada + reforma&#x27;, -r.necessidadeBase, true,
-      &#x27;Valor da entrada mais Valor da reforma. Independente de ser bancado por aporte de capital, empréstimo ponte comum ou empréstimo autofinanciado, o custo econômico da operação é sempre o mesmo — a forma de financiar aparece no Capital Próprio e no ROI, não aqui.&#x27;],
+      &#x27;Valor da entrada mais Valor da reforma. Independente de ser bancado por aporte de capital, empréstimo ponte comum ou empréstimo ponte, o custo econômico da operação é sempre o mesmo — a forma de financiar aparece no Capital Próprio e no ROI, não aqui.&#x27;],
     [&#x27;(–) Corretagem&#x27;, -r.corretagem, true,
       &#x27;Valor esperado de venda multiplicado pelo percentual de Corretagem.&#x27;],
     [&#x27;(–) Impostos sobre o ganho&#x27;, -r.imposto, true,
@@ -1687,7 +1668,7 @@ function renderFlow(r){
     [&#x27;Compra do imóvel&#x27;, r.compra],
     [&#x27;Entrada (financiada pelo empréstimo/aporte)&#x27;, r.entrada],
     [&#x27;Financiamento contratado&#x27;, r.valorFinanciado],
-    [state.aporteCapitalEnabled ? &#x27;Empréstimo ponte (após aporte)&#x27; : &#x27;Empréstimo ponte (autofinanciado)&#x27;, r.valorEmprestimo],
+    [state.aporteCapitalEnabled ? &#x27;Empréstimo ponte (após aporte)&#x27; : &#x27;Empréstimo ponte&#x27;, r.valorEmprestimo],
   ];
   if (state.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0){
     steps.push([&#x27;Reforma no cartão de crédito (&#x27;+state.prazoCartaoCredito+&#x27;x)&#x27;, r.cartaoValor]);
@@ -2006,7 +1987,7 @@ function exportarResumoTxt(){
 
   add(&#x27;&#x27;);
   add(&#x27;🏦 EMPRÉSTIMO PONTE&#x27;);
-  item(&#x27;Modo&#x27;, s.aporteCapitalEnabled ? &#x27;Com aporte de capital próprio&#x27; : &#x27;Autofinanciado (sem aporte)&#x27;);
+  item(&#x27;Modo&#x27;, s.aporteCapitalEnabled ? &#x27;Com aporte de capital próprio&#x27; : &#x27;Sem aporte de capital&#x27;);
   if (s.aporteCapitalEnabled) item(&#x27;Valor do aporte&#x27;, fmtBRL(r.aporte));
   item(&#x27;Valor do empréstimo (calculado)&#x27;, fmtBRL(r.valorEmprestimo));
   item(&#x27;Taxa do empréstimo&#x27;, fmtPct(s.taxaEmprestimo,2) + &#x27; a.m.&#x27;);
@@ -2050,8 +2031,8 @@ function exportarResumoTxt(){
   item(&#x27;Lucro líquido&#x27;, fmtBRL(r.lucroLiquido));
   item(&#x27;Sobra no bolso&#x27;, fmtBRL(r.sobraFinal));
   if (!s.aporteCapitalEnabled){
-    item(&#x27;Capital próprio necessário&#x27;, &#x27;praticamente R$ 0,00 (100% autofinanciado)&#x27;);
-    add(&#x27;⚠️ ROI/margem sobre capital próprio não se aplicam nesse cenário (capital investido ~zero).&#x27;);
+    item(&#x27;Capital próprio necessário&#x27;, &#x27;custos da operação + parcelas pagas após a carência&#x27;);
+    add(&#x27;O capital próprio considera custos da operação e parcelas efetivamente pagas após os 90 dias de carência.&#x27;);
   } else {
     item(&#x27;ROI&#x27;, fmtPct(r.roi,1));
     item(&#x27;Capital próprio necessário&#x27;, fmtBRL(r.capitalProprio));
