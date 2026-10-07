@@ -291,6 +291,7 @@
 <div class="app-tabs">
   <button class="app-tab" id="tabVisitas">Visitas</button>
   <button class="app-tab active" id="tabGastos">Gastos</button>
+  <button class="app-tab" id="tabSimulacao">SIMULAÇÃO</button>
 </div>
 
 
@@ -334,6 +335,1779 @@
       <tbody id="gTbody"></tbody>
     </table>
   </div>
+</section>
+
+<section id="simulacaoPanel" class="app-panel" style="max-width:none;padding:0 16px 40px;">
+  <iframe id="simulacaoFrame" title="SIMULAÇÃO" style="width:100%;height:calc(100vh - 110px);min-height:800px;border:0;border-radius:10px;background:#090b0f;display:block;" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;pt-BR&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;FlipDesk — Análise de House Flip&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;style&gt;
+/* ============================================================
+   FLIPDESK — DESIGN TOKENS
+   Terminal financeiro escuro: números sempre em monoespaçada
+   (precisão tipo Bloomberg), texto de interface em Inter.
+   ============================================================ */
+:root{
+  --bg:#090b0f;
+  --bg-grad: radial-gradient(1200px 600px at 100% -10%, rgba(124,140,255,.10), transparent 60%),
+             radial-gradient(900px 500px at -10% 10%, rgba(63,215,196,.06), transparent 55%);
+  --panel:#11141a;
+  --panel-2:#161a22;
+  --panel-3:#1b202a;
+  --border:#242a35;
+  --border-soft:#1c212a;
+  --text:#eef1f6;
+  --text-dim:#9aa4b5;
+  --text-faint:#616a7a;
+  --green:#2ed37e;
+  --green-soft:rgba(46,211,126,.12);
+  --green-line:rgba(46,211,126,.35);
+  --amber:#f2b035;
+  --amber-soft:rgba(242,176,53,.12);
+  --amber-line:rgba(242,176,53,.35);
+  --red:#f0555f;
+  --red-soft:rgba(240,85,95,.12);
+  --red-line:rgba(240,85,95,.35);
+  --accent:#7c8cff;
+  --accent-soft:rgba(124,140,255,.12);
+  --accent-2:#3fd7c4;
+  --mono:&#x27;JetBrains Mono&#x27;, ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans:&#x27;Inter&#x27;, -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius-sm:8px;
+  --radius:12px;
+  --radius-lg:18px;
+  --shadow-lg: 0 20px 60px -20px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg) var(--bg-grad);
+  background-attachment:fixed;
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:64px;
+}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+a{color:inherit;}
+::selection{background:var(--accent-soft);}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#242a35;border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:#2e3542;}
+
+/* ============================================================
+   TOPO / HEADER
+   ============================================================ */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 32px;border-bottom:1px solid var(--border-soft);
+  position:sticky;top:0;z-index:50;
+  background:rgba(9,11,15,.86);backdrop-filter:blur(14px);
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-mark{
+  width:30px;height:30px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:800;font-size:14px;color:#0a0d12;
+  box-shadow:0 4px 14px -4px rgba(124,140,255,.5);
+}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:-0.01em;}
+.brand-sub{font-size:11px;color:var(--text-faint);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.btn-ghost{
+  background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);
+  padding:8px 14px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:600;
+  cursor:pointer;transition:.15s;font-family:var(--sans);
+}
+.btn-ghost:hover{color:var(--text);border-color:#333b48;background:var(--panel-3);}
+
+/* ============================================================
+   HERO — SOBRA NO BOLSO (o que importa em 3 segundos)
+   ============================================================ */
+.hero{
+  padding:28px 32px 0;max-width:1400px;margin:0 auto;
+}
+.hero-card{
+  border-radius:var(--radius-lg);
+  border:1px solid var(--border);
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  padding:30px 34px;
+  position:relative;overflow:hidden;
+  box-shadow:var(--shadow-lg);
+}
+.hero-card::before{
+  content:&#x27;&#x27;;position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(500px 220px at 15% 0%, var(--accent-soft), transparent 60%);
+}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;position:relative;}
+.hero-label{
+  font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);
+  margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.hero-value{
+  font-family:var(--mono);font-weight:800;font-size:56px;line-height:1;letter-spacing:-0.02em;
+}
+.hero-value.pos{color:var(--green);}
+.hero-value.neg{color:var(--red);}
+.hero-sub{margin-top:10px;font-size:13px;color:var(--text-dim);}
+.status-pill{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:100px;
+  font-weight:700;font-size:13px;white-space:nowrap;border:1px solid transparent;
+}
+.status-pill.aprovada{background:var(--green-soft);color:var(--green);border-color:var(--green-line);}
+.status-pill.negociar{background:var(--amber-soft);color:var(--amber);border-color:var(--amber-line);}
+.status-pill.rejeitar{background:var(--red-soft);color:var(--red);border-color:var(--red-line);}
+.status-dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 4px currentColor22;}
+
+/* Month selector */
+.month-select{display:flex;flex-direction:column;align-items:flex-end;gap:8px;position:relative;}
+.month-select-label{font-size:11px;color:var(--text-faint);font-weight:600;letter-spacing:.06em;text-transform:uppercase;}
+.month-pills{display:flex;gap:6px;background:var(--panel-3);padding:5px;border-radius:100px;border:1px solid var(--border);}
+.month-pill{
+  width:36px;height:32px;border-radius:100px;border:none;background:transparent;color:var(--text-dim);
+  font-family:var(--mono);font-weight:700;font-size:13px;cursor:pointer;transition:.15s;
+}
+.month-pill:hover{color:var(--text);}
+.month-pill.active{background:var(--accent);color:#0a0d12;box-shadow:0 4px 12px -2px rgba(124,140,255,.5);}
+
+/* KPI strip */
+.kpi-row{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:1px;
+  margin-top:26px;border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--border);background:var(--border);position:relative;
+}
+.kpi{background:var(--panel);padding:16px 18px;}
+.kpi-label{font-size:11px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.kpi-value{font-family:var(--mono);font-weight:700;font-size:19px;}
+.kpi-value.pos{color:var(--green);}
+.kpi-value.neg{color:var(--red);}
+.kpi-value.neutral{color:var(--text);}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+.tabs{
+  max-width:1400px;margin:22px auto 0;padding:0 32px;
+  display:flex;gap:4px;border-bottom:1px solid var(--border-soft);
+}
+.tab-btn{
+  background:transparent;border:none;color:var(--text-faint);font-family:var(--sans);
+  font-weight:600;font-size:13.5px;padding:12px 16px;cursor:pointer;position:relative;top:1px;
+  border-bottom:2px solid transparent;transition:.15s;
+}
+.tab-btn:hover{color:var(--text-dim);}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--accent);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ============================================================
+   LAYOUT PRINCIPAL
+   ============================================================ */
+.layout{
+  max-width:1400px;margin:0 auto;padding:24px 32px 0;
+  display:grid;grid-template-columns:360px minmax(0,1fr);gap:22px;align-items:start;
+}
+.layout &gt; .input-sections,.layout &gt; .results-col{min-width:0;}
+@media (max-width:980px){ .layout{grid-template-columns:minmax(0,1fr);} .kpi-row{grid-template-columns:repeat(2,1fr);} }
+
+/* Card base */
+.card{
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;
+}
+.card + .card{margin-top:18px;}
+.card-head{
+  padding:15px 18px;border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.card-title{font-weight:700;font-size:13.5px;letter-spacing:.01em;display:flex;align-items:center;gap:8px;}
+.card-title .eyebrow{font-size:10.5px;color:var(--text-faint);font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--panel-3);padding:3px 7px;border-radius:5px;}
+.card-body{padding:18px;}
+.card-note{font-size:11.5px;color:var(--text-faint);line-height:1.6;}
+
+/* Inputs panel */
+.input-sections{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow-y:auto;overflow-x:hidden;padding-right:2px;min-width:0;}
+.input-group{border-bottom:1px solid var(--border-soft);}
+.input-group:last-child{border-bottom:none;}
+.input-group-head{
+  padding:13px 18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  user-select:none;
+}
+.input-group-head:hover{background:var(--panel-2);}
+.input-group-title{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
+.input-group-title .ic{width:6px;height:6px;border-radius:2px;background:var(--accent);}
+.chevron{color:var(--text-faint);transition:transform .18s;font-size:11px;}
+.input-group.collapsed .chevron{transform:rotate(-90deg);}
+.input-group-body{padding:4px 18px 16px;display:flex;flex-direction:column;gap:12px;}
+.input-group.collapsed .input-group-body{display:none;}
+
+.field{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;}
+.field label{font-size:11.5px;color:var(--text-dim);font-weight:500;display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 6px;}
+.field label .hint{color:var(--text-faint);font-weight:400;white-space:nowrap;}
+.input-wrap{
+  display:flex;align-items:center;background:var(--panel-3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);overflow:hidden;transition:.15s;
+}
+.input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.input-wrap .prefix,.input-wrap .suffix{
+  padding:0 10px;color:var(--text-faint);font-family:var(--mono);font-size:12.5px;font-weight:600;
+  display:flex;align-items:center;height:36px;
+}
+.input-wrap input, .input-wrap select{
+  flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);
+  font-family:var(--mono);font-size:13px;font-weight:600;padding:0 10px;height:36px;
+}
+.input-wrap select{font-family:var(--sans);font-weight:500;font-size:12.5px;cursor:pointer;}
+.input-wrap.readonly{opacity:.7;background:var(--panel-2);}
+.input-wrap.readonly input{cursor:default;}
+.lock-badge{font-size:9.5px;color:var(--text-faint);font-weight:700;letter-spacing:.04em;white-space:nowrap;flex-shrink:0;}
+
+.checkbox-row{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-dim);cursor:pointer;}
+.checkbox-row input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+
+/* ============================================================
+   RESUMO DA OPERAÇÃO
+   ============================================================ */
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border-soft);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-soft);}
+.summary-item{background:var(--panel);padding:14px 16px;}
+.summary-item.wide{grid-column:span 3;background:linear-gradient(90deg,var(--green-soft),transparent);border-top:1px solid var(--green-line);}
+.summary-label{font-size:10.5px;color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+.summary-value{font-family:var(--mono);font-weight:700;font-size:16px;}
+.summary-item.wide .summary-value{font-size:24px;color:var(--green);}
+@media (max-width:560px){.summary-grid{grid-template-columns:repeat(2,1fr);}.summary-item.wide{grid-column:span 2;}}
+
+/* Waterfall — sobra no bolso */
+.waterfall{display:flex;flex-direction:column;}
+.wf-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--border-soft);cursor:help;}
+.wf-row .wf-label{font-size:12.5px;color:var(--text-dim);}
+.wf-row .wf-value{font-family:var(--mono);font-weight:600;font-size:13px;}
+.wf-row .wf-value.neg{color:var(--red);}
+.wf-row .wf-value.pos{color:var(--text);}
+.wf-total{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:12px;padding:16px 18px;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--green-soft),transparent);border:1px solid var(--green-line);
+}
+.wf-total .wf-total-label{font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;}
+.wf-total .wf-total-value{font-family:var(--mono);font-weight:800;font-size:26px;color:var(--green);}
+.wf-total .wf-total-value.neg{color:var(--red);}
+
+/* Timeline / fluxo */
+.flow{display:flex;flex-direction:column;}
+.flow-item{display:flex;gap:14px;position:relative;padding-bottom:22px;}
+.flow-item:last-child{padding-bottom:0;}
+.flow-rail{display:flex;flex-direction:column;align-items:center;}
+.flow-dot{width:11px;height:11px;border-radius:50%;background:var(--panel-3);border:2px solid var(--accent);flex-shrink:0;margin-top:3px;}
+.flow-item.final .flow-dot{background:var(--green);border-color:var(--green);}
+.flow-line{width:1.5px;flex:1;background:var(--border);margin-top:4px;}
+.flow-item:last-child .flow-line{display:none;}
+.flow-content{display:flex;align-items:center;justify-content:space-between;flex:1;padding-top:0;}
+.flow-name{font-size:13px;font-weight:600;color:var(--text-dim);}
+.flow-item.final .flow-name{color:var(--text);}
+.flow-val{font-family:var(--mono);font-weight:700;font-size:13.5px;}
+
+/* Para onde foi o dinheiro — stacked bar */
+.stackbar{display:flex;width:100%;height:14px;border-radius:100px;overflow:hidden;margin-bottom:16px;background:var(--panel-3);}
+.stackbar span{height:100%;}
+.cost-list{display:flex;flex-direction:column;gap:2px;}
+.cost-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border-soft);}
+.cost-row:last-child{border-bottom:none;}
+.cost-swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+.cost-name{flex:1;font-size:12.5px;color:var(--text-dim);}
+.cost-pct{font-family:var(--mono);font-size:11.5px;color:var(--text-faint);width:44px;text-align:right;}
+.cost-val{font-family:var(--mono);font-size:12.5px;font-weight:600;width:100px;text-align:right;}
+
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media (max-width:700px){.chart-grid{grid-template-columns:1fr;}}
+.chart-box{position:relative;height:220px;}
+
+/* Checklist */
+.checklist{display:flex;flex-direction:column;gap:2px;}
+.check-item{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid var(--border-soft);}
+.check-item:last-child{border-bottom:none;}
+.check-icon{width:19px;height:19px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+.check-icon.on{background:var(--green-soft);color:var(--green);}
+.check-icon.off{background:var(--panel-3);color:var(--text-faint);border:1px solid var(--border);}
+.check-item.manual .check-icon{cursor:pointer;}
+.check-label{flex:1;font-size:12.5px;color:var(--text-dim);}
+.check-item .tag{font-size:9.5px;color:var(--text-faint);background:var(--panel-3);padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:.04em;}
+
+/* Score */
+.score-wrap{display:flex;align-items:center;gap:18px;}
+.score-num{font-family:var(--mono);font-weight:800;font-size:38px;}
+.score-bar-track{flex:1;height:10px;background:var(--panel-3);border-radius:100px;overflow:hidden;border:1px solid var(--border);}
+.score-bar-fill{height:100%;border-radius:100px;transition:width .3s ease;}
+.score-caption{margin-top:10px;font-size:12.5px;color:var(--text-dim);font-weight:600;}
+
+/* Conclusão */
+.conclusion{border-radius:var(--radius-sm);padding:18px;}
+.conclusion.aprovada{background:linear-gradient(135deg,var(--green-soft),transparent);border:1px solid var(--green-line);}
+.conclusion.negociar{background:linear-gradient(135deg,var(--amber-soft),transparent);border:1px solid var(--amber-line);}
+.conclusion.rejeitar{background:linear-gradient(135deg,var(--red-soft),transparent);border:1px solid var(--red-line);}
+.conclusion-title{font-size:20px;font-weight:800;margin-bottom:12px;}
+.conclusion.aprovada .conclusion-title{color:var(--green);}
+.conclusion.negociar .conclusion-title{color:var(--amber);}
+.conclusion.rejeitar .conclusion-title{color:var(--red);}
+.reason-list{display:flex;flex-direction:column;gap:7px;}
+.reason-item{display:flex;gap:9px;font-size:12.5px;color:var(--text-dim);align-items:flex-start;}
+.reason-mark{font-weight:800;flex-shrink:0;}
+.reason-item.pos .reason-mark{color:var(--green);}
+.reason-item.neg .reason-mark{color:var(--red);}
+
+/* Tables (cenários / equilíbrio / preço máx) */
+.table-wrap{overflow-x:auto;}
+table.data-table{width:100%;border-collapse:collapse;min-width:640px;}
+table.data-table th{
+  text-align:right;font-size:10.5px;color:var(--text-faint);font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+table.data-table th:first-child, table.data-table td:first-child{text-align:left;}
+table.data-table td{
+  text-align:right;font-family:var(--mono);font-size:13px;font-weight:600;padding:11px 12px;
+  border-bottom:1px solid var(--border-soft);white-space:nowrap;
+}
+table.data-table tr.active-row td{background:var(--accent-soft);}
+table.data-table td.pos{color:var(--green);}
+table.data-table td.neg{color:var(--red);}
+table.data-table td.label-cell{font-family:var(--sans);font-weight:600;color:var(--text-dim);}
+
+.section-intro{max-width:760px;margin-bottom:18px;}
+.section-intro h2{font-size:19px;margin:0 0 8px;font-weight:800;letter-spacing:-0.01em;}
+.section-intro p{color:var(--text-dim);font-size:13px;margin:0;line-height:1.6;}
+
+.formula-box{
+  background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:14px 16px;margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--text-dim);line-height:1.9;
+}
+.formula-box b{color:var(--text);}
+
+.editable-target{display:flex;align-items:center;gap:8px;}
+.editable-target .input-wrap{width:150px;}
+
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+@media(max-width:760px){.grid-3{grid-template-columns:1fr;}}
+
+.mini-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+.mini-card-label{font-size:11px;color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+
+footer.app-footer{max-width:1400px;margin:40px auto 0;padding:20px 32px;color:var(--text-faint);font-size:11.5px;border-top:1px solid var(--border-soft);}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;!-- ============================================================ TOPBAR ============================================================ --&gt;
+&lt;div class=&quot;topbar&quot;&gt;
+  &lt;div class=&quot;brand&quot;&gt;
+    &lt;div class=&quot;brand-mark&quot;&gt;FD&lt;/div&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;brand-name&quot;&gt;FlipDesk&lt;/div&gt;
+      &lt;div class=&quot;brand-sub&quot;&gt;Análise de investimento em House Flip&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;topbar-right&quot;&gt;
+    &lt;button class=&quot;btn-ghost&quot; onclick=&quot;exportarResumoTxt()&quot;&gt;📋 Baixar resumo (.txt)&lt;/button&gt;
+    &lt;button class=&quot;btn-ghost&quot; onclick=&quot;window.print()&quot;&gt;Exportar / Imprimir&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================ HERO ============================================================ --&gt;
+&lt;div class=&quot;hero&quot;&gt;
+  &lt;div class=&quot;hero-card&quot;&gt;
+    &lt;div class=&quot;hero-top&quot;&gt;
+      &lt;div&gt;
+        &lt;div class=&quot;hero-label&quot;&gt;Sobra no bolso estimada&lt;/div&gt;
+        &lt;div class=&quot;hero-value num&quot; id=&quot;heroLucro&quot;&gt;R$ 0,00&lt;/div&gt;
+        &lt;div class=&quot;hero-sub&quot; id=&quot;heroSub&quot;&gt;—&lt;/div&gt;
+        &lt;div style=&quot;margin-top:14px;&quot;&gt;&lt;span class=&quot;status-pill&quot; id=&quot;statusPill&quot;&gt;&lt;span class=&quot;status-dot&quot;&gt;&lt;/span&gt;&lt;span id=&quot;statusText&quot;&gt;—&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;month-select&quot;&gt;
+        &lt;div class=&quot;month-select-label&quot;&gt;Venda prevista no mês&lt;/div&gt;
+        &lt;div class=&quot;month-pills&quot; id=&quot;monthPills&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;kpi-row&quot;&gt;
+      &lt;div class=&quot;kpi&quot;&gt;&lt;div class=&quot;kpi-label&quot;&gt;Comissão corretagem&lt;/div&gt;&lt;div class=&quot;kpi-value num&quot; id=&quot;kpiMargem&quot;&gt;R$ 0&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;kpi&quot;&gt;&lt;div class=&quot;kpi-label&quot;&gt;Valor de compra&lt;/div&gt;&lt;div class=&quot;kpi-value num&quot; id=&quot;kpiRoi&quot;&gt;R$ 0&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;kpi&quot;&gt;&lt;div class=&quot;kpi-label&quot;&gt;Valor de venda&lt;/div&gt;&lt;div class=&quot;kpi-value num&quot; id=&quot;kpiPayback&quot;&gt;R$ 0&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;kpi&quot;&gt;&lt;div class=&quot;kpi-label&quot;&gt;Valor da obra&lt;/div&gt;&lt;div class=&quot;kpi-value num&quot; id=&quot;kpiRetorno&quot;&gt;R$ 0&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;kpi&quot;&gt;&lt;div class=&quot;kpi-label&quot;&gt;Tempo estimado da operação&lt;/div&gt;&lt;div class=&quot;kpi-value num&quot; id=&quot;kpiTempo&quot;&gt;0 meses&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================ TABS ============================================================ --&gt;
+&lt;div class=&quot;tabs&quot;&gt;
+  &lt;button class=&quot;tab-btn active&quot; data-tab=&quot;overview&quot;&gt;Visão Geral&lt;/button&gt;
+  &lt;button class=&quot;tab-btn&quot; data-tab=&quot;scenarios&quot;&gt;Cenários&lt;/button&gt;
+  &lt;button class=&quot;tab-btn&quot; data-tab=&quot;breakeven&quot;&gt;Ponto de Equilíbrio&lt;/button&gt;
+  &lt;button class=&quot;tab-btn&quot; data-tab=&quot;maxprice&quot;&gt;Preço Máximo de Compra&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================ TAB: VISÃO GERAL ============================================================ --&gt;
+&lt;div class=&quot;tab-panel active&quot; id=&quot;panel-overview&quot;&gt;
+&lt;div class=&quot;layout&quot;&gt;
+
+  &lt;!-- ---------------- COLUNA ESQUERDA: ENTRADAS ---------------- --&gt;
+  &lt;div class=&quot;input-sections&quot;&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Premissas da Operação &lt;span class=&quot;eyebrow&quot;&gt;editável&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+
+      &lt;!-- Aquisição --&gt;
+      &lt;div class=&quot;input-group&quot;&gt;
+        &lt;div class=&quot;input-group-head&quot; onclick=&quot;toggleGroup(this)&quot;&gt;
+          &lt;div class=&quot;input-group-title&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&lt;/span&gt;Aquisição &amp;amp; Financiamento &lt;span class=&quot;eyebrow&quot;&gt;90 dias sem parcela&lt;/span&gt;&lt;/div&gt;
+          &lt;span class=&quot;chevron&quot;&gt;▾&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;input-group-body&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Valor de compra&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;compra&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Valor esperado de venda&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;valorVenda&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Entrada &lt;span class=&quot;hint&quot;&gt;% do valor de compra&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;0.5&quot; min=&quot;0&quot; max=&quot;100&quot; data-field=&quot;entradaPct&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field-row&quot;&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Valor da entrada &lt;span class=&quot;lock-badge&quot;&gt;CALC.&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap readonly&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;disp_entrada&quot; readonly&gt;&lt;/div&gt;
+              &lt;div class=&quot;hint&quot; style=&quot;margin-top:4px;&quot;&gt;financiada pelo empréstimo ponte&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Valor financiado &lt;span class=&quot;lock-badge&quot;&gt;CALC.&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap readonly&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;disp_financiado&quot; readonly&gt;&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field-row&quot;&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Taxa do financiamento &lt;span class=&quot;hint&quot;&gt;% a.a.&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;0.1&quot; min=&quot;0&quot; data-field=&quot;taxaFinanciamento&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Prazo financiamento &lt;span class=&quot;hint&quot;&gt;meses&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;1&quot; min=&quot;1&quot; data-field=&quot;prazoFinanciamento&quot; data-type=&quot;number&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;m&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Sistema de amortização&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;
+              &lt;select data-field=&quot;sistemaAmortizacao&quot; data-type=&quot;select&quot;&gt;
+                &lt;option value=&quot;SAC&quot;&gt;SAC — amortização constante&lt;/option&gt;
+                &lt;option value=&quot;PRICE&quot;&gt;PRICE — parcela fixa&lt;/option&gt;
+              &lt;/select&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Empréstimo --&gt;
+      &lt;div class=&quot;input-group&quot;&gt;
+        &lt;div class=&quot;input-group-head&quot; onclick=&quot;toggleGroup(this)&quot;&gt;
+          &lt;div class=&quot;input-group-title&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&lt;/span&gt;Empréstimo Ponte &lt;span class=&quot;eyebrow&quot;&gt;90 dias sem parcela&lt;/span&gt;&lt;/div&gt;
+          &lt;span class=&quot;chevron&quot;&gt;▾&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;input-group-body&quot;&gt;
+          &lt;label class=&quot;checkbox-row&quot;&gt;&lt;input type=&quot;checkbox&quot; data-field=&quot;aporteCapitalEnabled&quot; data-type=&quot;checkbox&quot;&gt; Fazer aporte de capital próprio&lt;/label&gt;
+          &lt;div class=&quot;field&quot; id=&quot;aporteValorField&quot;&gt;
+            &lt;label&gt;Valor do aporte &lt;span class=&quot;hint&quot;&gt;reduz o empréstimo&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;aporteCapitalValor&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Valor do empréstimo &lt;span class=&quot;lock-badge&quot;&gt;CALC.&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap readonly&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;disp_emprestimo&quot; readonly&gt;&lt;/div&gt;
+            &lt;div class=&quot;hint&quot; style=&quot;margin-top:4px;&quot; id=&quot;hint_emprestimo&quot;&gt;= valor da reforma + valor da entrada&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field-row&quot;&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Taxa do empréstimo &lt;span class=&quot;hint&quot;&gt;% a.m.&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;0.1&quot; min=&quot;0&quot; data-field=&quot;taxaEmprestimo&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Prazo empréstimo &lt;span class=&quot;hint&quot;&gt;meses&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;1&quot; min=&quot;1&quot; data-field=&quot;prazoEmprestimo&quot; data-type=&quot;number&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;m&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Reforma --&gt;
+      &lt;div class=&quot;input-group&quot;&gt;
+        &lt;div class=&quot;input-group-head&quot; onclick=&quot;toggleGroup(this)&quot;&gt;
+          &lt;div class=&quot;input-group-title&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&lt;/span&gt;Reforma&lt;/div&gt;
+          &lt;span class=&quot;chevron&quot;&gt;▾&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;input-group-body&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Valor da reforma&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;valorReforma&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Reserva de contingência &lt;span class=&quot;hint&quot;&gt;% da reforma&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;1&quot; min=&quot;0&quot; data-field=&quot;reservaContingenciaPct&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;label class=&quot;checkbox-row&quot;&gt;&lt;input type=&quot;checkbox&quot; data-field=&quot;cartaoCreditoEnabled&quot; data-type=&quot;checkbox&quot;&gt; Financiar parte da reforma no cartão (parcelado)&lt;/label&gt;
+          &lt;div id=&quot;cartaoCreditoFields&quot;&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Valor da reforma no cartão &lt;span class=&quot;hint&quot;&gt;reduz o valor do empréstimo&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;cartaoCreditoValor&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;field-row&quot;&gt;
+              &lt;div class=&quot;field&quot;&gt;
+                &lt;label&gt;Em quantas vezes&lt;/label&gt;
+                &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;1&quot; min=&quot;1&quot; data-field=&quot;prazoCartaoCredito&quot; data-type=&quot;number&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;x&lt;/span&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;field&quot;&gt;
+                &lt;label&gt;Taxa do cartão &lt;span class=&quot;hint&quot;&gt;% a.m.&lt;/span&gt;&lt;/label&gt;
+                &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;0.1&quot; min=&quot;0&quot; data-field=&quot;taxaCartaoCredito&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;field&quot;&gt;
+              &lt;label&gt;Parcela do cartão &lt;span class=&quot;lock-badge&quot;&gt;CALC.&lt;/span&gt;&lt;/label&gt;
+              &lt;div class=&quot;input-wrap readonly&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;disp_parcelaCartao&quot; readonly&gt;&lt;/div&gt;
+              &lt;div class=&quot;hint&quot; style=&quot;margin-top:4px;&quot;&gt;se vender antes de quitar todas as parcelas, o saldo restante é pago de uma vez, na venda&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Custos de aquisição --&gt;
+      &lt;div class=&quot;input-group&quot;&gt;
+        &lt;div class=&quot;input-group-head&quot; onclick=&quot;toggleGroup(this)&quot;&gt;
+          &lt;div class=&quot;input-group-title&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&lt;/span&gt;Custos de Aquisição&lt;/div&gt;
+          &lt;span class=&quot;chevron&quot;&gt;▾&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;input-group-body&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;ITBI &lt;span class=&quot;hint&quot;&gt;% do valor de compra&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;0.1&quot; min=&quot;0&quot; data-field=&quot;itbiPct&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Custos cartorários &lt;span class=&quot;hint&quot;&gt;% do valor de compra · base real: R$ 10.637,89 / R$ 310.000&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;0.01&quot; min=&quot;0&quot; data-field=&quot;cartorioPct&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hint&quot; style=&quot;margin-top:4px;&quot;&gt;Inclui registro da compra e venda, alienação fiduciária, certidão, arquivamentos e demais atos do orçamento. Escritura separada = R$ 0.&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Avaliação bancária &lt;span class=&quot;hint&quot;&gt;referência Santander&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;taxasBancarias&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Custos mensais --&gt;
+      &lt;div class=&quot;input-group&quot;&gt;
+        &lt;div class=&quot;input-group-head&quot; onclick=&quot;toggleGroup(this)&quot;&gt;
+          &lt;div class=&quot;input-group-title&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&lt;/span&gt;Custos Mensais de Carregamento&lt;/div&gt;
+          &lt;span class=&quot;chevron&quot;&gt;▾&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;input-group-body&quot;&gt;
+          &lt;div class=&quot;field-row&quot;&gt;
+            &lt;div class=&quot;field&quot;&gt;&lt;label&gt;Condomínio&lt;/label&gt;&lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;condominioMensal&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;field&quot;&gt;&lt;label&gt;IPTU&lt;/label&gt;&lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;iptuMensal&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;label&gt;Seguro mensal&lt;/label&gt;&lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;seguro&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Venda e impostos --&gt;
+      &lt;div class=&quot;input-group&quot;&gt;
+        &lt;div class=&quot;input-group-head&quot; onclick=&quot;toggleGroup(this)&quot;&gt;
+          &lt;div class=&quot;input-group-title&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&lt;/span&gt;Venda &amp;amp; Impostos&lt;/div&gt;
+          &lt;span class=&quot;chevron&quot;&gt;▾&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;input-group-body&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Corretagem &lt;span class=&quot;hint&quot;&gt;% do valor de venda&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;0.5&quot; min=&quot;0&quot; data-field=&quot;corretagemPct&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;label class=&quot;checkbox-row&quot;&gt;&lt;input type=&quot;checkbox&quot; data-field=&quot;impostoGanhoCapitalEnabled&quot; data-type=&quot;checkbox&quot;&gt; Considerar imposto sobre ganho de capital&lt;/label&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Alíquota do imposto &lt;span class=&quot;hint&quot;&gt;% sobre o ganho&lt;/span&gt;&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;input type=&quot;number&quot; step=&quot;1&quot; min=&quot;0&quot; data-field=&quot;impostoGanhoCapitalPct&quot; data-type=&quot;percent&quot;&gt;&lt;span class=&quot;suffix&quot;&gt;%&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;
+            &lt;label&gt;Despesas diversas&lt;/label&gt;
+            &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; data-field=&quot;despesasDiversas&quot; data-type=&quot;currency&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;!-- ---------------- COLUNA DIREITA: RESULTADOS ---------------- --&gt;
+  &lt;div class=&quot;results-col&quot;&gt;
+
+    &lt;!-- Resumo da operação --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Resumo da Operação&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
+        &lt;div class=&quot;summary-grid&quot;&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Compra&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_compra&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Entrada&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_entrada&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Financiamento&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_financ&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Reforma&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_reforma&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Venda&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_venda&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Empréstimo ponte&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_emprestimo&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Aporte de capital&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_aporte&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Reforma no cartão&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_cartao&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;summary-item wide&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;Lucro líquido&lt;/div&gt;&lt;div class=&quot;summary-value num&quot; id=&quot;sum_lucro&quot;&gt;—&lt;/div&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Parcelas --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Parcelas Mensais &lt;span class=&quot;eyebrow&quot;&gt;financiamento e empréstimo&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
+        &lt;div class=&quot;summary-grid&quot; id=&quot;parcelasGrid&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card-body&quot; style=&quot;padding-top:0;&quot;&gt;
+        &lt;div class=&quot;card-note&quot; id=&quot;parcelasNote&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Sobra no bolso --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Sobra no Bolso &lt;span class=&quot;eyebrow&quot;&gt;resultado da operação inteira&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot;&gt;
+        &lt;div class=&quot;waterfall&quot; id=&quot;waterfall&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;wf-total&quot;&gt;
+          &lt;div class=&quot;wf-total-label&quot;&gt;Sobra final&lt;/div&gt;
+          &lt;div class=&quot;wf-total-value num&quot; id=&quot;wfTotal&quot;&gt;R$ 0,00&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;card-note&quot; style=&quot;margin-top:10px;&quot;&gt;Resultado de caixa da operação inteira: já descontam financiamento, empréstimo (entrada + reforma, com juros e amortização de todo o período) e demais custos — por isso bate com o Lucro Líquido. Não inclui devolução de capital próprio; para o retorno percentual sobre o que você investiu, veja ROI acima.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Fluxo da operação --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Fluxo da Operação&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot;&gt;
+        &lt;div class=&quot;flow&quot; id=&quot;flow&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Para onde foi o dinheiro --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Para Onde Foi o Dinheiro&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot;&gt;
+        &lt;div class=&quot;stackbar&quot; id=&quot;stackbar&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;cost-list&quot; id=&quot;costList&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Gráficos --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Gráficos&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot;&gt;
+        &lt;div class=&quot;chart-grid&quot;&gt;
+          &lt;div&gt;
+            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;LUCRO LÍQUIDO POR MÊS DE VENDA&lt;/div&gt;
+            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartLucro&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div&gt;
+            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;ROI E MARGEM POR MÊS&lt;/div&gt;
+            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartRoiMargem&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div&gt;
+            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;DISTRIBUIÇÃO DE CUSTOS&lt;/div&gt;
+            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartCustos&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div&gt;
+            &lt;div class=&quot;card-note&quot; style=&quot;margin-bottom:8px;font-weight:700;color:var(--text-dim);&quot;&gt;SALDO DEVEDOR AO LONGO DO TEMPO&lt;/div&gt;
+            &lt;div class=&quot;chart-box&quot;&gt;&lt;canvas id=&quot;chartSaldo&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Checklist --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Checklist da Operação&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot;&gt;
+        &lt;div class=&quot;checklist&quot; id=&quot;checklist&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Score --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Score da Oportunidade&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot;&gt;
+        &lt;div class=&quot;score-wrap&quot;&gt;
+          &lt;div class=&quot;score-num num&quot; id=&quot;scoreNum&quot;&gt;0&lt;/div&gt;
+          &lt;div class=&quot;score-bar-track&quot;&gt;&lt;div class=&quot;score-bar-fill&quot; id=&quot;scoreBar&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;num&quot; style=&quot;color:var(--text-faint);font-size:12px;&quot;&gt;/100&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;score-caption&quot; id=&quot;scoreCaption&quot;&gt;—&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Conclusão --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card-head&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Conclusão&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card-body&quot;&gt;
+        &lt;div class=&quot;conclusion&quot; id=&quot;conclusionBox&quot;&gt;
+          &lt;div class=&quot;conclusion-title&quot; id=&quot;conclusionTitle&quot;&gt;—&lt;/div&gt;
+          &lt;div class=&quot;reason-list&quot; id=&quot;conclusionReasons&quot;&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================ TAB: CENÁRIOS ============================================================ --&gt;
+&lt;div class=&quot;tab-panel&quot; id=&quot;panel-scenarios&quot;&gt;
+  &lt;div class=&quot;layout&quot; style=&quot;grid-template-columns:1fr;&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;section-intro&quot;&gt;
+        &lt;h2&gt;Cenários de venda — 1 a 6 meses&lt;/h2&gt;
+        &lt;p&gt;Compara a operação inteira, mês a mês, com todos os custos de carregamento e juros recalculados de forma independente para cada prazo. Use esta tabela para responder: &quot;quanto custa atrasar a venda?&quot;&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card&quot;&gt;
+        &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
+          &lt;div class=&quot;table-wrap&quot;&gt;
+            &lt;table class=&quot;data-table&quot; id=&quot;scenarioTable&quot;&gt;
+              &lt;thead&gt;
+                &lt;tr&gt;
+                  &lt;th&gt;Mês da venda&lt;/th&gt;
+                  &lt;th&gt;Lucro líquido&lt;/th&gt;
+                  &lt;th&gt;ROI&lt;/th&gt;
+                  &lt;th&gt;Margem&lt;/th&gt;
+                  &lt;th&gt;Saldo financiamento&lt;/th&gt;
+                  &lt;th&gt;Saldo empréstimo&lt;/th&gt;
+                  &lt;th&gt;Custos acumulados&lt;/th&gt;
+                &lt;/tr&gt;
+              &lt;/thead&gt;
+              &lt;tbody id=&quot;scenarioBody&quot;&gt;&lt;/tbody&gt;
+            &lt;/table&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================ TAB: PONTO DE EQUILÍBRIO ============================================================ --&gt;
+&lt;div class=&quot;tab-panel&quot; id=&quot;panel-breakeven&quot;&gt;
+  &lt;div class=&quot;layout&quot; style=&quot;grid-template-columns:1fr;&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;section-intro&quot;&gt;
+        &lt;h2&gt;Ponto de equilíbrio&lt;/h2&gt;
+        &lt;p&gt;Preço mínimo de venda necessário, mantendo todas as demais premissas e o mês de venda selecionado no topo, para atingir cada nível de lucro. Calculado por busca numérica sobre a mesma engine de cálculo da Visão Geral — não é uma aproximação simplificada.&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card&quot;&gt;
+        &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
+          &lt;div class=&quot;table-wrap&quot;&gt;
+            &lt;table class=&quot;data-table&quot; id=&quot;breakevenTable&quot;&gt;
+              &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Objetivo&lt;/th&gt;&lt;th&gt;Preço mínimo de venda&lt;/th&gt;&lt;th&gt;Margem resultante&lt;/th&gt;&lt;th&gt;ROI resultante&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+              &lt;tbody id=&quot;breakevenBody&quot;&gt;&lt;/tbody&gt;
+            &lt;/table&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;card-body&quot; style=&quot;padding-top:0;&quot;&gt;
+          &lt;div class=&quot;formula-box&quot;&gt;
+            &lt;b&gt;Como é calculado:&lt;/b&gt; para cada meta de lucro L, resolvemos V (preço de venda) tal que
+            LucroLíquido(V) = V − CustoTotal(V) = L, onde CustoTotal inclui corretagem e imposto de ganho de capital
+            (ambos proporcionais a V). A busca é feita por bisseção sobre a função exata de cálculo do lucro, garantindo
+            precisão mesmo com termos percentuais sobre o preço de venda.
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================ TAB: PREÇO MÁXIMO DE COMPRA ============================================================ --&gt;
+&lt;div class=&quot;tab-panel&quot; id=&quot;panel-maxprice&quot;&gt;
+  &lt;div class=&quot;layout&quot; style=&quot;grid-template-columns:1fr;&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;section-intro&quot;&gt;
+        &lt;h2&gt;Preço máximo de compra&lt;/h2&gt;
+        &lt;p&gt;Se você já sabe por quanto pretende vender o imóvel, esta tabela mostra o quanto pode pagar na compra hoje para preservar cada meta de lucro — mantendo entrada (%), reforma, o empréstimo que financia as duas, e demais custos como estão configurados na Visão Geral.&lt;/p&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;grid-3&quot; id=&quot;targetVendaInputs&quot;&gt;&lt;/div&gt;
+
+      &lt;div class=&quot;card&quot;&gt;
+        &lt;div class=&quot;card-body&quot; style=&quot;padding:0;&quot;&gt;
+          &lt;div class=&quot;table-wrap&quot;&gt;
+            &lt;table class=&quot;data-table&quot; id=&quot;maxPriceTable&quot;&gt;
+              &lt;thead&gt;&lt;tr id=&quot;maxPriceHead&quot;&gt;&lt;/tr&gt;&lt;/thead&gt;
+              &lt;tbody id=&quot;maxPriceBody&quot;&gt;&lt;/tbody&gt;
+            &lt;/table&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;card-body&quot; style=&quot;padding-top:0;&quot;&gt;
+          &lt;div class=&quot;formula-box&quot;&gt;
+            &lt;b&gt;Como é calculado:&lt;/b&gt; para cada par (Preço de venda alvo, Meta de lucro), resolvemos o valor de compra C
+            tal que LucroLíquido(C, V) = Meta, por bisseção sobre a engine exata (ITBI, financiamento, juros e imposto
+            escalam corretamente com C). Entrada é mantida no percentual configurado; empréstimo ponte permanece fixo.
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;footer class=&quot;app-footer&quot;&gt;
+  FlipDesk — ferramenta de apoio à decisão. Todos os cálculos são estimativas baseadas nas premissas informadas e não constituem aconselhamento financeiro, jurídico ou tributário. Valide taxas, ITBI e alíquotas com as instituições e órgãos competentes da sua região antes de decidir.
+&lt;/footer&gt;
+
+&lt;script&gt;
+/* ================================================================
+   FLIPDESK — ENGINE DE CÁLCULO
+   ================================================================ */
+
+// ---------- Estado global (todas as premissas editáveis) ----------
+const state = {
+  compra: 320000,
+  valorVenda: 410000,
+  entradaPct: 20,
+  taxaEmprestimo: 1.67,      // % a.m.
+  taxaFinanciamento: 12.73,  // % a.a.
+  sistemaAmortizacao: &#x27;SAC&#x27;,
+  prazoFinanciamento: 360,  // meses
+  prazoEmprestimo: 24,      // meses
+  valorReforma: 45000,
+  reservaContingenciaPct: 15,
+  itbiPct: 3,
+  // Base real do orçamento: R$ 10.637,89 sobre compra de R$ 310.000 = 3,4316%
+  // A simulação escala esse custo proporcionalmente para novas compras.
+  cartorioPct: 3.4316,
+  condominioMensal: 550,
+  iptuMensal: 180,
+  seguro: 90,
+  taxasBancarias: 1274, // tarifa de avaliação de garantia do financiamento de referência
+  corretagemPct: 4,
+  impostoGanhoCapitalEnabled: true,
+  impostoGanhoCapitalPct: 15,
+  despesasDiversas: 3000,
+  mesVenda: 4,
+  aporteCapitalEnabled: false,
+  aporteCapitalValor: 0,
+  cartaoCreditoEnabled: false,
+  cartaoCreditoValor: 0,
+  prazoCartaoCredito: 10,   // em quantas vezes
+  taxaCartaoCredito: 10     // % a.m., editável manualmente
+};
+
+// Itens manuais do checklist (julgamento humano, não derivam de números)
+const manualChecklist = { mercado:false, reforma:false, liquidez:false };
+
+// ---------- Formatação BR ----------
+function fmtBRL(v){
+  v = Number(v)||0;
+  return v.toLocaleString(&#x27;pt-BR&#x27;,{style:&#x27;currency&#x27;,currency:&#x27;BRL&#x27;});
+}
+function fmtBRLNoSign(v){
+  v = Number(v)||0;
+  return v.toLocaleString(&#x27;pt-BR&#x27;,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtPct(v,dec=1){
+  v = Number(v)||0;
+  return v.toLocaleString(&#x27;pt-BR&#x27;,{minimumFractionDigits:dec,maximumFractionDigits:dec})+&#x27;%&#x27;;
+}
+
+// ---------- Tabela de amortização (SAC ou PRICE) ----------
+// Retorna array de {mes, juros, amortizacao, parcela, saldo}, linear no principal.
+function gerarParcelas(principal, taxaMensal, prazoMeses, sistema){
+  const arr = [];
+  let saldo = principal;
+  prazoMeses = Math.max(1, Math.round(prazoMeses));
+  if (sistema === &#x27;PRICE&#x27; &amp;&amp; taxaMensal &gt; 0){
+    const parcela = principal * taxaMensal / (1 - Math.pow(1+taxaMensal, -prazoMeses));
+    for (let m=1; m&lt;=prazoMeses; m++){
+      const juros = saldo*taxaMensal;
+      const amort = parcela - juros;
+      saldo = Math.max(saldo - amort, 0);
+      arr.push({mes:m, juros, amortizacao:amort, parcela, saldo});
+    }
+  } else if (sistema === &#x27;PRICE&#x27;){ // taxa zero
+    const parcela = principal/prazoMeses;
+    for (let m=1; m&lt;=prazoMeses; m++){
+      saldo = Math.max(saldo-parcela,0);
+      arr.push({mes:m, juros:0, amortizacao:parcela, parcela, saldo});
+    }
+  } else { // SAC
+    const amortConst = principal/prazoMeses;
+    for (let m=1; m&lt;=prazoMeses; m++){
+      const juros = saldo*taxaMensal;
+      const parcela = amortConst+juros;
+      saldo = Math.max(saldo - amortConst, 0);
+      arr.push({mes:m, juros, amortizacao:amortConst, parcela, saldo});
+    }
+  }
+  return arr;
+}
+
+// Carência de caixa: 90 dias (3 meses) para financiamento do apartamento e empréstimo ponte.
+// Nos meses 1, 2 e 3 não há pagamento de parcela. Os juros do período são incorporados
+// ao saldo devedor. A primeira parcela efetivamente paga ocorre no mês 4.
+const CARENCIA_PAGAMENTO_MESES = 3;
+
+function gerarParcelasComCarenciaTotal(principal, taxaMensal, prazoMeses, sistema, carenciaMeses){
+  const arr = [];
+  let saldo = principal;
+  prazoMeses = Math.max(1, Math.round(prazoMeses));
+  carenciaMeses = Math.max(0, Math.round(carenciaMeses));
+
+  // 90 dias sem desembolso: juros acumulam no saldo.
+  for (let m=1; m&lt;=carenciaMeses; m++){
+    const juros = saldo * taxaMensal;
+    saldo += juros;
+    arr.push({mes:m, juros, amortizacao:0, parcela:0, saldo, carencia:true});
+  }
+
+  // Mantém o prazo de amortização contratado a partir da primeira parcela paga.
+  const sched = gerarParcelas(saldo, taxaMensal, prazoMeses, sistema);
+  sched.forEach((p,i)=&gt;arr.push({...p, mes:carenciaMeses+i+1, carencia:false}));
+  return arr;
+}
+
+// ---------- Resolve o empréstimo &quot;autofinanciado&quot; ----------
+// Usado quando NÃO há aporte de capital: o próprio empréstimo ponte precisa ser
+// grande o bastante para cobrir, além de entrada + reforma, também a soma das
+// parcelas do financiamento e das parcelas do próprio empréstimo pagas até o mês M.
+// Como aumentar o empréstimo aumenta sua própria parcela, é um cálculo circular —
+// resolvido aqui por bisseção (mesma técnica já usada nos outros solvers do arquivo).
+function resolverEmprestimoAutofinanciado(necessidadeBase, sumFinM, taxaMensalEmp, prazoEmprestimo, sistema, M){
+  let lo = necessidadeBase;
+  let hi = necessidadeBase * 6 + sumFinM * 20 + 3000000;
+  for (let i=0; i&lt;80; i++){
+    const mid = (lo+hi)/2;
+    const sched = gerarParcelasComCarenciaTotal(mid, taxaMensalEmp, prazoEmprestimo, sistema, CARENCIA_PAGAMENTO_MESES);
+    const sumEmpM = sched.slice(0, Math.min(M, sched.length)).reduce((a,b)=&gt;a+b.parcela, 0);
+    const necessario = necessidadeBase + sumFinM + sumEmpM;
+    if (mid &lt; necessario) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+
+// ---------- Engine principal: calcula a operação inteira para um mês M ----------
+// overrides permite recalcular com compra/venda hipotéticos (usado nos solvers)
+function calcular(overrides, M){
+  const s = Object.assign({}, state, overrides || {});
+  M = Math.max(0, Math.round(M));
+
+  const compra = s.compra;
+  const valorVenda = s.valorVenda;
+  const valorFinanciado = compra * (1 - s.entradaPct/100);
+  const entrada = compra - valorFinanciado;
+  // A reserva de contingência NÃO entra no empréstimo — continua sendo capital próprio,
+  // por isso ela é somada uma única vez lá embaixo (em capitalProprio e em sobraFinal),
+  // nunca dentro do valorEmprestimo, para não ser contada em dobro.
+  const reserva = s.valorReforma * s.reservaContingenciaPct/100;
+  // necessidadeBase = o que precisa ser coberto por aporte próprio e/ou empréstimo: entrada + reforma.
+  const necessidadeBase = s.valorReforma + entrada;
+
+  const taxaMensalFin = Math.pow(1 + s.taxaFinanciamento/100, 1/12) - 1;
+  const taxaMensalEmp = s.taxaEmprestimo/100;
+  const taxaMensalCartao = s.taxaCartaoCredito/100;
+
+  const schedFin = gerarParcelasComCarenciaTotal(valorFinanciado, taxaMensalFin, s.prazoFinanciamento, s.sistemaAmortizacao, CARENCIA_PAGAMENTO_MESES);
+
+  // Cartão de crédito (parte da reforma, parcelado em Nx fixas): reduz o quanto
+  // precisa ser coberto por aporte e/ou empréstimo. Não pode financiar mais do que
+  // o próprio valor da reforma.
+  const cartaoValor = s.cartaoCreditoEnabled ? Math.max(0, Math.min(s.cartaoCreditoValor, s.valorReforma)) : 0;
+  const prazoCartao = Math.max(1, Math.round(s.prazoCartaoCredito) || 1);
+  const schedCartao = gerarParcelas(cartaoValor, taxaMensalCartao, prazoCartao, &#x27;PRICE&#x27;);
+  const idxCartao = Math.min(Math.max(M,1), schedCartao.length) - 1;
+  const saldoCartao = M &gt; 0 ? schedCartao[idxCartao].saldo : cartaoValor;
+  const jurosCartao = schedCartao.slice(0, M).reduce((a,b)=&gt;a+b.juros, 0);
+  const parcelaCartao = schedCartao.length ? schedCartao[0].parcela : 0;
+
+  // Custos de aquisição e de carregamento mensal calculados aqui (antes do bloco do
+  // empréstimo) porque, no modo autofinanciado, eles também entram na conta do que
+  // o próprio empréstimo precisa bancar.
+  const itbi = compra * s.itbiPct/100;
+  const custoCartorio = compra * (s.cartorioPct/100);
+  const custosAquisicao = itbi + custoCartorio + s.taxasBancarias;
+  const custosMensais = (s.condominioMensal + s.iptuMensal + s.seguro) * M;
+
+  // necessidadeBase (entrada + reforma) é o custo econômico total, sempre o mesmo.
+  // O que o cartão cobre sai do que precisa ser bancado por aporte/empréstimo:
+  const necessidadeAjustada = Math.max(necessidadeBase - cartaoValor, 0);
+
+  // Aporte de capital: SIM -&gt; o valor informado entra na conta e reduz o empréstimo;
+  //                          o resto dos custos (aquisição, mensais, reserva, diversos)
+  //                          continua saindo do seu bolso.
+  //                     NÃO -&gt; sem aporte: o empréstimo cobre apenas a necessidade inicial; não cresce para
+  //                          bancar as próprias parcelas nem as parcelas do apartamento. Os custos
+  //                          de aquisição, carregamento e parcelas após a carência entram no fluxo de caixa da operação.
+  let aporte = 0;
+  let valorEmprestimo;
+  if (s.aporteCapitalEnabled){
+    aporte = Math.max(0, Math.min(s.aporteCapitalValor, necessidadeAjustada));
+    valorEmprestimo = Math.max(necessidadeAjustada - aporte, 0);
+  } else {
+    // Nova lógica: o empréstimo ponte NÃO cresce para pagar as próprias parcelas,
+    // nem as parcelas do financiamento do apartamento. Ele cobre apenas a necessidade
+    // inicial da operação (entrada + reforma, descontada a parte colocada no cartão).
+    // Após 90 dias, eventuais parcelas são desembolsos do fluxo da operação; na venda,
+    // os saldos devedores remanescentes são quitados integralmente com o valor recebido.
+    valorEmprestimo = Math.max(necessidadeAjustada, 0);
+  }
+
+  const schedEmp = gerarParcelasComCarenciaTotal(valorEmprestimo, taxaMensalEmp, s.prazoEmprestimo, s.sistemaAmortizacao, CARENCIA_PAGAMENTO_MESES);
+
+  const idxFin = Math.min(Math.max(M,1), schedFin.length) - 1;
+  const idxEmp = Math.min(Math.max(M,1), schedEmp.length) - 1;
+
+  const saldoFin = M &gt; 0 ? schedFin[idxFin].saldo : valorFinanciado;
+  const saldoEmp = M &gt; 0 ? schedEmp[idxEmp].saldo : valorEmprestimo;
+  const jurosFin = schedFin.slice(0, M).reduce((a,b)=&gt;a+b.juros, 0);
+  const jurosEmp = schedEmp.slice(0, M).reduce((a,b)=&gt;a+b.juros, 0);
+
+  // Parcela mensal (R$) de cada dívida: no PRICE é fixa (1ª = última parcela);
+  // no SAC é decrescente mês a mês, por isso guardamos a 1ª e a última parcela do período pago.
+  const parcelaFinInicial = schedFin.length &gt; CARENCIA_PAGAMENTO_MESES ? schedFin[CARENCIA_PAGAMENTO_MESES].parcela : 0;
+  const parcelaFinFinal = M &gt; 0 ? schedFin[idxFin].parcela : parcelaFinInicial;
+  const parcelaEmpInicial = schedEmp.length &gt; CARENCIA_PAGAMENTO_MESES ? schedEmp[CARENCIA_PAGAMENTO_MESES].parcela : 0;
+  const parcelaEmpFinal = M &gt; 0 ? schedEmp[idxEmp].parcela : parcelaEmpInicial;
+  // Primeira parcela efetivamente paga após os 90 dias de carência.
+  const parcelaEmpPosCarencia = parcelaEmpInicial;
+
+  const corretagem = valorVenda * s.corretagemPct/100;
+  const ganhoCapital = Math.max(valorVenda - (compra + s.valorReforma + custosAquisicao), 0);
+  const imposto = s.impostoGanhoCapitalEnabled ? ganhoCapital * s.impostoGanhoCapitalPct/100 : 0;
+
+  const custoTotal = compra + s.valorReforma + reserva + custosAquisicao + s.despesasDiversas +
+                      custosMensais + jurosFin + jurosEmp + jurosCartao + corretagem + imposto;
+  const lucroLiquido = valorVenda - custoTotal;
+
+  // Capital próprio = dinheiro que sai do bolso do investidor.
+  // Com aporte: aporte + reserva + custos de aquisição + custos mensais + despesas
+  //             diversas — esses últimos nunca são financiados nesse modo.
+  // Sem aporte: custos e parcelas efetivamente pagos entram como capital próprio.
+  // Capital próprio considera os custos que efetivamente saem do caixa e, após a
+  // carência, as parcelas pagas até a venda. O principal amortizado não vira custo
+  // econômico em dobro: ele reduz o saldo quitado na venda.
+  const parcelasFinPagas = schedFin.slice(0, Math.min(M, schedFin.length)).reduce((a,b)=&gt;a+b.parcela, 0);
+  const parcelasEmpPagas = schedEmp.slice(0, Math.min(M, schedEmp.length)).reduce((a,b)=&gt;a+b.parcela, 0);
+  const parcelasCartaoPagas = schedCartao.slice(0, Math.min(M, schedCartao.length)).reduce((a,b)=&gt;a+b.parcela, 0);
+  const capitalProprio = Math.max(
+    aporte + reserva + custosAquisicao + s.despesasDiversas + custosMensais +
+    parcelasFinPagas + parcelasEmpPagas + parcelasCartaoPagas, 1
+  );
+  const roi = lucroLiquido / capitalProprio * 100;
+  const margem = valorVenda &gt; 0 ? lucroLiquido / valorVenda * 100 : 0;
+  const retornoCompra = compra &gt; 0 ? lucroLiquido / compra * 100 : 0;
+
+  // A &quot;sobra no bolso&quot; precisa refletir o resultado de caixa da operação INTEIRA, não só
+  // o dia do fechamento, e precisa ser INDEPENDENTE de como entrada + reforma foram
+  // bancadas (aporte, empréstimo normal ou empréstimo autofinanciado) — a forma de
+  // financiar isso é uma decisão de capitalProprio/ROI, não deve mudar o resultado
+  // econômico da operação. Por isso descontamos necessidadeBase (entrada + reforma) no
+  // lugar de valorEmprestimo: o valor cheio originalmente financiado (valorFinanciado)
+  // mais necessidadeBase reproduzem exatamente compra + reforma, batendo com lucroLiquido
+  // em qualquer um dos dois cenários (com ou sem aporte).
+  const sobraFinal = valorVenda - valorFinanciado - necessidadeBase - corretagem - imposto -
+                      (jurosFin + jurosEmp + jurosCartao) - (custosAquisicao + custosMensais + s.despesasDiversas + reserva);
+
+  return {
+    compra, valorVenda, entrada, valorFinanciado, valorEmprestimo, necessidadeBase, aporte,
+    saldoFin, saldoEmp, jurosFin, jurosEmp, itbi, custoCartorio, custosAquisicao, reserva, custosMensais,
+    corretagem, ganhoCapital, imposto, custoTotal, lucroLiquido, capitalProprio, roi, margem,
+    retornoCompra, sobraFinal, custosOperacionais: custoTotal - compra, M,
+    cartaoValor, saldoCartao, jurosCartao, parcelaCartao,
+    parcelaFinInicial, parcelaFinFinal, parcelaEmpInicial, parcelaEmpFinal, parcelaEmpPosCarencia
+  };
+}
+
+// ---------- Solver genérico por bisseção ----------
+function resolverVendaMinima(targetLucro, M){
+  let lo = 0, hi = Math.max(state.compra*4, 500000) + 2000000;
+  for (let i=0;i&lt;60;i++){
+    const mid = (lo+hi)/2;
+    const r = calcular({valorVenda: mid}, M);
+    if (r.lucroLiquido &lt; targetLucro) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+function resolverCompraMaxima(targetVenda, targetLucro, M){
+  let lo = 0, hi = targetVenda*2 + 1000000;
+  for (let i=0;i&lt;60;i++){
+    const mid = (lo+hi)/2;
+    const r = calcular({compra: mid, valorVenda: targetVenda}, M);
+    if (r.lucroLiquido &gt; targetLucro) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+
+/* ================================================================
+   UI — MÁSCARAS E BINDING
+   ================================================================ */
+function setCurrencyDisplay(input, value){
+  input.dataset.numeric = value;
+  input.value = fmtBRLNoSign(value);
+}
+function attachCurrencyMask(input){
+  input.addEventListener(&#x27;input&#x27;, () =&gt; {
+    let raw = input.value.replace(/\D/g,&#x27;&#x27;);
+    if (raw===&#x27;&#x27;) raw=&#x27;0&#x27;;
+    const value = parseInt(raw,10)/100;
+    input.dataset.numeric = value;
+    input.value = fmtBRLNoSign(value);
+    onFieldChange(input);
+  });
+  input.addEventListener(&#x27;focus&#x27;, () =&gt; setTimeout(()=&gt;input.select(),0));
+}
+function onFieldChange(input){
+  const field = input.dataset.field;
+  const type = input.dataset.type;
+  if (type === &#x27;currency&#x27;) state[field] = parseFloat(input.dataset.numeric)||0;
+  else if (type === &#x27;percent&#x27; || type === &#x27;number&#x27;) state[field] = parseFloat(input.value)||0;
+  else if (type === &#x27;select&#x27;) state[field] = input.value;
+  else if (type === &#x27;checkbox&#x27;) state[field] = input.checked;
+  recalcAll();
+}
+
+function initInputs(){
+  document.querySelectorAll(&#x27;[data-field]&#x27;).forEach(input=&gt;{
+    const field = input.dataset.field;
+    const type = input.dataset.type;
+    if (type === &#x27;currency&#x27;){
+      attachCurrencyMask(input);
+      setCurrencyDisplay(input, state[field]);
+    } else if (type === &#x27;percent&#x27; || type === &#x27;number&#x27;){
+      input.value = state[field];
+      input.addEventListener(&#x27;input&#x27;, ()=&gt;onFieldChange(input));
+    } else if (type === &#x27;select&#x27;){
+      input.value = state[field];
+      input.addEventListener(&#x27;change&#x27;, ()=&gt;onFieldChange(input));
+    } else if (type === &#x27;checkbox&#x27;){
+      input.checked = state[field];
+      input.addEventListener(&#x27;change&#x27;, ()=&gt;onFieldChange(input));
+    }
+  });
+}
+
+function toggleGroup(headEl){
+  headEl.parentElement.classList.toggle(&#x27;collapsed&#x27;);
+}
+
+/* ================================================================
+   MÊS DE VENDA — seletor
+   ================================================================ */
+function initMonthPills(){
+  const wrap = document.getElementById(&#x27;monthPills&#x27;);
+  wrap.innerHTML=&#x27;&#x27;;
+  for (let m=1; m&lt;=6; m++){
+    const btn = document.createElement(&#x27;button&#x27;);
+    btn.className = &#x27;month-pill&#x27; + (m===state.mesVenda ? &#x27; active&#x27;:&#x27;&#x27;);
+    btn.textContent = m;
+    btn.title = m + (m===1?&#x27; mês&#x27;:&#x27; meses&#x27;);
+    btn.addEventListener(&#x27;click&#x27;, ()=&gt;{
+      state.mesVenda = m;
+      document.querySelectorAll(&#x27;.month-pill&#x27;).forEach(p=&gt;p.classList.remove(&#x27;active&#x27;));
+      btn.classList.add(&#x27;active&#x27;);
+      recalcAll();
+    });
+    wrap.appendChild(btn);
+  }
+}
+
+/* ================================================================
+   TABS
+   ================================================================ */
+function initTabs(){
+  document.querySelectorAll(&#x27;.tab-btn&#x27;).forEach(btn=&gt;{
+    btn.addEventListener(&#x27;click&#x27;, ()=&gt;{
+      document.querySelectorAll(&#x27;.tab-btn&#x27;).forEach(b=&gt;b.classList.remove(&#x27;active&#x27;));
+      document.querySelectorAll(&#x27;.tab-panel&#x27;).forEach(p=&gt;p.classList.remove(&#x27;active&#x27;));
+      btn.classList.add(&#x27;active&#x27;);
+      document.getElementById(&#x27;panel-&#x27;+btn.dataset.tab).classList.add(&#x27;active&#x27;);
+      if (btn.dataset.tab===&#x27;scenarios&#x27;) renderScenarios();
+      if (btn.dataset.tab===&#x27;breakeven&#x27;) renderBreakeven();
+      if (btn.dataset.tab===&#x27;maxprice&#x27;) renderMaxPrice();
+    });
+  });
+}
+
+/* ================================================================
+   RENDER — VISÃO GERAL
+   ================================================================ */
+const COST_COLORS = {
+  compra:&#x27;#7c8cff&#x27;, reforma:&#x27;#3fd7c4&#x27;, itbi:&#x27;#f2b035&#x27;, cartorial:&#x27;#e88ad1&#x27;,
+  corretagem:&#x27;#5ec8f2&#x27;, juros:&#x27;#f0555f&#x27;, mensais:&#x27;#a78bfa&#x27;, impostos:&#x27;#ff9f68&#x27;, diversos:&#x27;#6b7385&#x27;
+};
+
+function renderHero(r){
+  const heroVal = document.getElementById(&#x27;heroLucro&#x27;);
+  heroVal.textContent = fmtBRL(r.sobraFinal);
+  heroVal.className = &#x27;hero-value num &#x27; + (r.sobraFinal&gt;=0?&#x27;pos&#x27;:&#x27;neg&#x27;);
+  document.getElementById(&#x27;heroSub&#x27;).textContent =
+    `Considerando venda em ${state.mesVenda} ${state.mesVenda===1?&#x27;mês&#x27;:&#x27;meses&#x27;}, sobre um valor de compra de ${fmtBRL(state.compra)} e venda estimada em ${fmtBRL(state.valorVenda)}.`;
+
+  const pill = document.getElementById(&#x27;statusPill&#x27;);
+  const text = document.getElementById(&#x27;statusText&#x27;);
+  let cls=&#x27;rejeitar&#x27;, label=&#x27;NÃO COMPRAR&#x27;;
+  if (r.lucroLiquido &gt;= 30000 &amp;&amp; r.margem &gt;= 10 &amp;&amp; r.roi &gt;= 20){ cls=&#x27;aprovada&#x27;; label=&#x27;OPERAÇÃO APROVADA&#x27;; }
+  else if (r.lucroLiquido &gt; 0){ cls=&#x27;negociar&#x27;; label=&#x27;NEGOCIAR&#x27;; }
+  pill.className = &#x27;status-pill &#x27;+cls;
+  text.textContent = label;
+
+  document.getElementById(&#x27;kpiMargem&#x27;).textContent = fmtBRL(r.corretagem) + &#x27; (&#x27; + state.corretagemPct.toString().replace(&#x27;.&#x27;,&#x27;,&#x27;) + &#x27;%)&#x27;;
+  document.getElementById(&#x27;kpiMargem&#x27;).className = &#x27;kpi-value num neutral&#x27;;
+  document.getElementById(&#x27;kpiRoi&#x27;).textContent = fmtBRL(r.compra);
+  document.getElementById(&#x27;kpiRoi&#x27;).className = &#x27;kpi-value num neutral&#x27;;
+  document.getElementById(&#x27;kpiPayback&#x27;).textContent = fmtBRL(r.valorVenda);
+  document.getElementById(&#x27;kpiPayback&#x27;).className = &#x27;kpi-value num neutral&#x27;;
+  const reformaPct = r.compra &gt; 0 ? (state.valorReforma / r.compra * 100) : 0;
+  document.getElementById(&#x27;kpiRetorno&#x27;).textContent = fmtBRL(state.valorReforma) + &#x27; (&#x27; + reformaPct.toFixed(1).replace(&#x27;.&#x27;,&#x27;,&#x27;) + &#x27;%)&#x27;;
+  document.getElementById(&#x27;kpiRetorno&#x27;).className = &#x27;kpi-value num neutral&#x27;;
+  document.getElementById(&#x27;kpiTempo&#x27;).textContent = state.mesVenda + (state.mesVenda===1?&#x27; mês&#x27;:&#x27; meses&#x27;);
+
+  return {cls,label};
+}
+
+function renderComputedFields(r){
+  document.getElementById(&#x27;disp_entrada&#x27;).value = fmtBRLNoSign(r.entrada);
+  document.getElementById(&#x27;disp_financiado&#x27;).value = fmtBRLNoSign(r.valorFinanciado);
+  document.getElementById(&#x27;disp_emprestimo&#x27;).value = fmtBRLNoSign(r.valorEmprestimo);
+
+  const aporteField = document.getElementById(&#x27;aporteValorField&#x27;);
+  aporteField.style.display = state.aporteCapitalEnabled ? &#x27;&#x27; : &#x27;none&#x27;;
+
+  const cartaoFields = document.getElementById(&#x27;cartaoCreditoFields&#x27;);
+  cartaoFields.style.display = state.cartaoCreditoEnabled ? &#x27;&#x27; : &#x27;none&#x27;;
+  document.getElementById(&#x27;disp_parcelaCartao&#x27;).value = fmtBRLNoSign(r.parcelaCartao);
+
+  const hint = document.getElementById(&#x27;hint_emprestimo&#x27;);
+  const cartaoTrecho = (state.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0) ? &#x27; − reforma no cartão&#x27; : &#x27;&#x27;;
+  hint.textContent = (state.aporteCapitalEnabled
+    ? &#x27;= valor da reforma + valor da entrada − aporte de capital&#x27;
+    : &#x27;= entrada + reforma + custos de aquisição + custos mensais + reserva + despesas diversas + parcelas do empréstimo, financiamento e cartão (100% autofinanciado, nada sai do seu bolso)&#x27;) + cartaoTrecho;
+}
+
+function renderSummary(r){
+  document.getElementById(&#x27;sum_compra&#x27;).textContent = fmtBRL(r.compra);
+  document.getElementById(&#x27;sum_entrada&#x27;).textContent = fmtBRL(r.entrada);
+  document.getElementById(&#x27;sum_financ&#x27;).textContent = fmtBRL(r.valorFinanciado);
+  document.getElementById(&#x27;sum_reforma&#x27;).textContent = fmtBRL(state.valorReforma);
+  document.getElementById(&#x27;sum_venda&#x27;).textContent = fmtBRL(r.valorVenda);
+  document.getElementById(&#x27;sum_emprestimo&#x27;).textContent = fmtBRL(r.valorEmprestimo);
+  document.getElementById(&#x27;sum_aporte&#x27;).textContent = fmtBRL(r.aporte);
+  document.getElementById(&#x27;sum_cartao&#x27;).textContent = fmtBRL(r.cartaoValor);
+  const lucroEl = document.getElementById(&#x27;sum_lucro&#x27;);
+  lucroEl.textContent = fmtBRL(r.lucroLiquido);
+  lucroEl.style.color = r.lucroLiquido&gt;=0 ? &#x27;var(--green)&#x27; : &#x27;var(--red)&#x27;;
+}
+
+function renderParcelas(r){
+  const sistema = state.sistemaAmortizacao;
+  const isPrice = sistema === &#x27;PRICE&#x27;;
+  const grid = document.getElementById(&#x27;parcelasGrid&#x27;);
+
+  const rowsFin = [
+    [`Financiamento — meses 1–${CARENCIA_PAGAMENTO_MESES}`, &#x27;R$ 0,00&#x27;],
+    ...(state.mesVenda &gt; CARENCIA_PAGAMENTO_MESES ? [[`1ª parcela do financiamento (mês ${CARENCIA_PAGAMENTO_MESES+1})`, fmtBRL(r.parcelaFinInicial)]] : [])
+  ];
+  const carenciaAtiva = state.mesVenda &gt; CARENCIA_PAGAMENTO_MESES;
+  const rowsEmp = [
+    [`Empréstimo — meses 1–${CARENCIA_PAGAMENTO_MESES}`, &#x27;R$ 0,00&#x27;],
+    ...(carenciaAtiva ? [[`1ª parcela do empréstimo (mês ${CARENCIA_PAGAMENTO_MESES+1})`, fmtBRL(r.parcelaEmpPosCarencia)]] : [])
+  ];
+
+  const rowsCartao = (state.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0)
+    ? [[`Parcela do cartão (${state.prazoCartaoCredito}x)`, fmtBRL(r.parcelaCartao)]]
+    : [];
+
+  const items = [...rowsFin, ...rowsEmp, ...rowsCartao];
+  grid.innerHTML = items.map(([label,val])=&gt;
+    `&lt;div class=&quot;summary-item&quot;&gt;&lt;div class=&quot;summary-label&quot;&gt;${label}&lt;/div&gt;&lt;div class=&quot;summary-value num&quot;&gt;${val}&lt;/div&gt;&lt;/div&gt;`
+  ).join(&#x27;&#x27;);
+
+  const note = document.getElementById(&#x27;parcelasNote&#x27;);
+  note.textContent = `Carência de 90 dias: nos meses 1, 2 e 3 não há pagamento de parcela do financiamento do apartamento nem do empréstimo ponte. Os juros desses 90 dias são incorporados ao saldo devedor. A primeira parcela dos dois ocorre no mês 4. `
+    + (isPrice ? &#x27;Após a carência, sistema PRICE com parcela fixa.&#x27; : &#x27;Após a carência, sistema SAC com amortização constante e parcelas decrescentes.&#x27;)
+    + (rowsCartao.length ? ` Cartão de crédito: parcela fixa em ${state.prazoCartaoCredito}x (tabela PRICE), independente do sistema de amortização escolhido acima. Se a venda ocorrer antes da última parcela, o saldo restante é quitado de uma vez no fechamento.` : &#x27;&#x27;);
+}
+
+function renderWaterfall(r){
+  const rows = [
+    [&#x27;Valor recebido da venda&#x27;, r.valorVenda, false,
+      &#x27;Valor esperado de venda do imóvel, informado na Visão Geral.&#x27;],
+    [&#x27;(–) Financiamento (compra)&#x27;, -r.valorFinanciado, true,
+      &#x27;Valor de compra menos Valor da entrada. É o financiamento total contratado para a compra do imóvel — inclui tanto as parcelas já pagas ao longo dos meses quanto o saldo devedor quitado na venda.&#x27;],
+    [&#x27;(–) Entrada + reforma&#x27;, -r.necessidadeBase, true,
+      &#x27;Valor da entrada mais Valor da reforma. Independente de ser bancado por aporte de capital, empréstimo ponte comum ou empréstimo autofinanciado, o custo econômico da operação é sempre o mesmo — a forma de financiar aparece no Capital Próprio e no ROI, não aqui.&#x27;],
+    [&#x27;(–) Corretagem&#x27;, -r.corretagem, true,
+      &#x27;Valor esperado de venda multiplicado pelo percentual de Corretagem.&#x27;],
+    [&#x27;(–) Impostos sobre o ganho&#x27;, -r.imposto, true,
+      &#x27;Ganho de capital multiplicado pela Alíquota do imposto. Ganho de capital = Valor esperado de venda menos (Valor de compra + Valor da reforma + custos de aquisição: ITBI, Registro, Escritura, Cartório e Taxas bancárias).&#x27;],
+    [&#x27;(–) Juros do financiamento&#x27;, -r.jurosFin, true,
+      `Juros do financiamento acumulados até o mês da venda. Nos primeiros 90 dias não há pagamento de parcela; os juros são incorporados ao saldo, e a primeira parcela ocorre no mês 4. Parcela: ${fmtBRL(r.parcelaFinInicial)}${state.sistemaAmortizacao===&#x27;PRICE&#x27; ? &#x27; (fixa)&#x27; : ` na 1ª, caindo até ${fmtBRL(r.parcelaFinFinal)} no mês da venda`}.`],
+    [&#x27;(–) Juros do empréstimo&#x27;, -r.jurosEmp, true,
+      `Juros do empréstimo acumulados até o mês da venda. Nos primeiros 90 dias não há pagamento de parcela; os juros são incorporados ao saldo. A primeira parcela ocorre no mês ${CARENCIA_PAGAMENTO_MESES+1}: ${fmtBRL(r.parcelaEmpPosCarencia)}${state.sistemaAmortizacao===&#x27;SAC&#x27; ? ` na 1ª, caindo até ${fmtBRL(r.parcelaEmpFinal)} no mês da venda` : &#x27; (fixa)&#x27;}.`],
+    [&#x27;(–) Custos de aquisição, mensais e diversos&#x27;, -(r.custosAquisicao + r.custosMensais + state.despesasDiversas + r.reserva), true,
+      &#x27;Soma de: ITBI + Registro + Escritura + Cartório + Taxas bancárias (custos de aquisição); Condomínio + IPTU + Seguro mensal, multiplicados pelos meses até a venda (custos mensais); Despesas diversas; e Reserva de contingência (percentual sobre o Valor da reforma).&#x27;],
+  ];
+  if (state.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0){
+    rows.splice(6, 0, [&#x27;(–) Juros do cartão de crédito&#x27;, -r.jurosCartao, true,
+      `Soma dos juros pagos nas parcelas do cartão de crédito (${fmtBRL(r.cartaoValor)} financiados, parcela fixa: ${fmtBRL(r.parcelaCartao)} em até ${state.prazoCartaoCredito}x), calculados pela Taxa do cartão, do primeiro mês até o mês da venda.`]);
+  }
+  const wrap = document.getElementById(&#x27;waterfall&#x27;);
+  wrap.innerHTML = rows.map(([label, val, , tooltip])=&gt;{
+    const cls = val&lt;0 ? &#x27;neg&#x27;:&#x27;pos&#x27;;
+    const sign = val&lt;0 ? &#x27;– &#x27; : &#x27;&#x27;;
+    return `&lt;div class=&quot;wf-row&quot; title=&quot;${tooltip.replace(/&quot;/g,&#x27;&amp;quot;&#x27;)}&quot;&gt;&lt;span class=&quot;wf-label&quot;&gt;${label}&lt;/span&gt;&lt;span class=&quot;wf-value num ${cls}&quot;&gt;${sign}${fmtBRLNoSign(Math.abs(val))}&lt;/span&gt;&lt;/div&gt;`;
+  }).join(&#x27;&#x27;);
+  const totalEl = document.getElementById(&#x27;wfTotal&#x27;);
+  totalEl.textContent = fmtBRL(r.sobraFinal);
+  totalEl.className = &#x27;wf-total-value num &#x27; + (r.sobraFinal&lt;0?&#x27;neg&#x27;:&#x27;&#x27;);
+  const totalWrap = totalEl.closest(&#x27;.wf-total&#x27;);
+  if (totalWrap) totalWrap.title = &#x27;Valor recebido da venda menos Financiamento (compra), Entrada + reforma, Corretagem, Impostos sobre o ganho, Juros pagos no período e Custos de aquisição, mensais e diversos.&#x27;;
+}
+
+function renderFlow(r){
+  const steps = [
+    [&#x27;Compra do imóvel&#x27;, r.compra],
+    [&#x27;Entrada (financiada pelo empréstimo/aporte)&#x27;, r.entrada],
+    [&#x27;Financiamento contratado&#x27;, r.valorFinanciado],
+    [state.aporteCapitalEnabled ? &#x27;Empréstimo ponte (após aporte)&#x27; : &#x27;Empréstimo ponte (autofinanciado)&#x27;, r.valorEmprestimo],
+  ];
+  if (state.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0){
+    steps.push([&#x27;Reforma no cartão de crédito (&#x27;+state.prazoCartaoCredito+&#x27;x)&#x27;, r.cartaoValor]);
+  }
+  steps.push(
+    [&#x27;Venda do imóvel&#x27;, r.valorVenda],
+    [&#x27;Quitação do financiamento&#x27;, -r.saldoFin],
+    [&#x27;Quitação do empréstimo&#x27;, -r.saldoEmp]
+  );
+  if (state.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0){
+    steps.push([&#x27;Quitação do cartão de crédito&#x27;, -r.saldoCartao]);
+  }
+  steps.push([&#x27;Lucro líquido final&#x27;, r.lucroLiquido]);
+  const wrap = document.getElementById(&#x27;flow&#x27;);
+  wrap.innerHTML = steps.map(([label,val],i)=&gt;{
+    const isFinal = i===steps.length-1;
+    return `&lt;div class=&quot;flow-item ${isFinal?&#x27;final&#x27;:&#x27;&#x27;}&quot;&gt;
+      &lt;div class=&quot;flow-rail&quot;&gt;&lt;div class=&quot;flow-dot&quot;&gt;&lt;/div&gt;&lt;div class=&quot;flow-line&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;flow-content&quot;&gt;&lt;span class=&quot;flow-name&quot;&gt;${label}&lt;/span&gt;&lt;span class=&quot;flow-val num&quot; style=&quot;color:${isFinal?(val&gt;=0?&#x27;var(--green)&#x27;:&#x27;var(--red)&#x27;):&#x27;var(--text)&#x27;}&quot;&gt;${fmtBRL(Math.abs(val))}${val&lt;0 &amp;&amp; !isFinal ? &#x27; (débito)&#x27;:&#x27;&#x27;}&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;`;
+  }).join(&#x27;&#x27;);
+}
+
+function renderCosts(r){
+  const items = [
+    {name:&#x27;Compra do imóvel&#x27;, val:r.compra, color:COST_COLORS.compra},
+    {name:&#x27;Reforma&#x27;, val:state.valorReforma + r.reserva, color:COST_COLORS.reforma},
+    {name:&#x27;ITBI + cartório + avaliação bancária&#x27;, val:r.custosAquisicao, color:COST_COLORS.itbi},
+    {name:&#x27;Corretagem&#x27;, val:r.corretagem, color:COST_COLORS.corretagem},
+    {name:&#x27;Juros (financiamento + empréstimo + cartão)&#x27;, val:r.jurosFin+r.jurosEmp+r.jurosCartao, color:COST_COLORS.juros},
+    {name:&#x27;Condomínio, IPTU e seguro&#x27;, val:r.custosMensais, color:COST_COLORS.mensais},
+    {name:&#x27;Impostos sobre ganho de capital&#x27;, val:r.imposto, color:COST_COLORS.impostos},
+    {name:&#x27;Despesas diversas&#x27;, val:state.despesasDiversas, color:COST_COLORS.diversos},
+  ];
+  const total = items.reduce((a,b)=&gt;a+b.val,0) || 1;
+  document.getElementById(&#x27;stackbar&#x27;).innerHTML = items.map(it=&gt;
+    `&lt;span style=&quot;width:${Math.max(it.val/total*100,0)}%;background:${it.color}&quot;&gt;&lt;/span&gt;`
+  ).join(&#x27;&#x27;);
+  document.getElementById(&#x27;costList&#x27;).innerHTML = items.map(it=&gt;
+    `&lt;div class=&quot;cost-row&quot;&gt;
+      &lt;span class=&quot;cost-swatch&quot; style=&quot;background:${it.color}&quot;&gt;&lt;/span&gt;
+      &lt;span class=&quot;cost-name&quot;&gt;${it.name}&lt;/span&gt;
+      &lt;span class=&quot;cost-pct num&quot;&gt;${fmtPct(it.val/total*100,1)}&lt;/span&gt;
+      &lt;span class=&quot;cost-val num&quot;&gt;${fmtBRL(it.val)}&lt;/span&gt;
+    &lt;/div&gt;`
+  ).join(&#x27;&#x27;);
+  return items;
+}
+
+// ---------- Checklist ----------
+function computeAutoChecklist(r){
+  const worst = calcular({}, 6);
+  return [
+    {key:&#x27;margem&#x27;, label:&#x27;Margem líquida acima de 10%&#x27;, value: r.margem &gt;= 10},
+    {key:&#x27;lucro&#x27;, label:&#x27;Lucro líquido acima de R$ 30.000&#x27;, value: r.lucroLiquido &gt;= 30000},
+    {key:&#x27;roi&#x27;, label:&#x27;ROI acima de 20%&#x27;, value: r.roi &gt;= 20},
+    {key:&#x27;venda90&#x27;, label:&#x27;Venda prevista em até 90 dias&#x27;, value: state.mesVenda &lt;= 3},
+    {key:&#x27;pior&#x27;, label:&#x27;Pior cenário (6 meses) continua lucrativo&#x27;, value: worst.lucroLiquido &gt; 0},
+  ];
+}
+function renderChecklistAndScore(r){
+  const manualItems = [
+    {key:&#x27;mercado&#x27;, label:&#x27;Comprado abaixo do mercado&#x27;},
+    {key:&#x27;reforma&#x27;, label:&#x27;Reforma validada (orçamento confiável)&#x27;},
+    {key:&#x27;liquidez&#x27;, label:&#x27;Boa liquidez da região&#x27;},
+  ];
+  const autoItems = computeAutoChecklist(r);
+  const wrap = document.getElementById(&#x27;checklist&#x27;);
+  wrap.innerHTML=&#x27;&#x27;;
+  manualItems.forEach(it=&gt;{
+    const on = manualChecklist[it.key];
+    const div = document.createElement(&#x27;div&#x27;);
+    div.className=&#x27;check-item manual&#x27;;
+    div.innerHTML = `&lt;div class=&quot;check-icon ${on?&#x27;on&#x27;:&#x27;off&#x27;}&quot;&gt;${on?&#x27;✓&#x27;:&#x27;&#x27;}&lt;/div&gt;&lt;div class=&quot;check-label&quot;&gt;${it.label}&lt;/div&gt;&lt;span class=&quot;tag&quot;&gt;manual&lt;/span&gt;`;
+    div.querySelector(&#x27;.check-icon&#x27;).addEventListener(&#x27;click&#x27;, ()=&gt;{
+      manualChecklist[it.key] = !manualChecklist[it.key];
+      recalcAll();
+    });
+    wrap.appendChild(div);
+  });
+  autoItems.forEach(it=&gt;{
+    const div = document.createElement(&#x27;div&#x27;);
+    div.className=&#x27;check-item&#x27;;
+    div.innerHTML = `&lt;div class=&quot;check-icon ${it.value?&#x27;on&#x27;:&#x27;off&#x27;}&quot;&gt;${it.value?&#x27;✓&#x27;:&#x27;&#x27;}&lt;/div&gt;&lt;div class=&quot;check-label&quot;&gt;${it.label}&lt;/div&gt;&lt;span class=&quot;tag&quot;&gt;auto&lt;/span&gt;`;
+    wrap.appendChild(div);
+  });
+
+  const total = manualItems.length + autoItems.length;
+  const checked = manualItems.filter(i=&gt;manualChecklist[i.key]).length + autoItems.filter(i=&gt;i.value).length;
+  const score = Math.round(checked/total*100);
+  document.getElementById(&#x27;scoreNum&#x27;).textContent = score;
+  const bar = document.getElementById(&#x27;scoreBar&#x27;);
+  bar.style.width = score+&#x27;%&#x27;;
+  bar.style.background = score&gt;=70?&#x27;var(--green)&#x27;:(score&gt;=40?&#x27;var(--amber)&#x27;:&#x27;var(--red)&#x27;);
+  document.getElementById(&#x27;scoreNum&#x27;).style.color = score&gt;=70?&#x27;var(--green)&#x27;:(score&gt;=40?&#x27;var(--amber)&#x27;:&#x27;var(--red)&#x27;);
+  let caption=&#x27;Oportunidade fraca — revise as premissas.&#x27;;
+  if (score&gt;=85) caption=&#x27;Excelente oportunidade.&#x27;;
+  else if (score&gt;=70) caption=&#x27;Boa oportunidade.&#x27;;
+  else if (score&gt;=40) caption=&#x27;Oportunidade mediana — negocie os termos.&#x27;;
+  document.getElementById(&#x27;scoreCaption&#x27;).textContent = caption;
+
+  return {manualItems, autoItems, score};
+}
+
+function renderConclusion(r, statusInfo, checklistInfo){
+  const box = document.getElementById(&#x27;conclusionBox&#x27;);
+  const title = document.getElementById(&#x27;conclusionTitle&#x27;);
+  const reasons = document.getElementById(&#x27;conclusionReasons&#x27;);
+  let cls=&#x27;rejeitar&#x27;, headline=&#x27;NÃO COMPRAR&#x27;;
+  if (statusInfo.cls===&#x27;aprovada&#x27;){ cls=&#x27;aprovada&#x27;; headline=&#x27;COMPRAR&#x27;; }
+  else if (statusInfo.cls===&#x27;negociar&#x27;){ cls=&#x27;negociar&#x27;; headline=&#x27;NEGOCIAR ANTES DE COMPRAR&#x27;; }
+  box.className = &#x27;conclusion &#x27;+cls;
+  title.textContent = headline;
+
+  const allItems = [
+    {label:&#x27;ROI acima de 20%&#x27;, ok:r.roi&gt;=20},
+    {label:&#x27;Lucro líquido acima da meta de R$ 30.000&#x27;, ok:r.lucroLiquido&gt;=30000},
+    {label:&#x27;Margem líquida saudável (acima de 10%)&#x27;, ok:r.margem&gt;=10},
+    {label:&#x27;Pior cenário (venda em 6 meses) continua positivo&#x27;, ok:calcular({},6).lucroLiquido&gt;0},
+    {label:&#x27;Reforma dentro do orçamento planejado&#x27;, ok:checklistInfo.manualItems ? manualChecklist.reforma : true},
+    {label:&#x27;Comprado abaixo do valor de mercado&#x27;, ok:manualChecklist.mercado},
+    {label:&#x27;Boa liquidez de revenda na região&#x27;, ok:manualChecklist.liquidez},
+    {label:&#x27;Venda prevista em até 90 dias&#x27;, ok:state.mesVenda&lt;=3},
+  ];
+  reasons.innerHTML = allItems.map(it=&gt;
+    `&lt;div class=&quot;reason-item ${it.ok?&#x27;pos&#x27;:&#x27;neg&#x27;}&quot;&gt;&lt;span class=&quot;reason-mark&quot;&gt;${it.ok?&#x27;✔&#x27;:&#x27;✘&#x27;}&lt;/span&gt;&lt;span&gt;${it.label}&lt;/span&gt;&lt;/div&gt;`
+  ).join(&#x27;&#x27;);
+}
+
+/* ================================================================
+   GRÁFICOS (Chart.js)
+   ================================================================ */
+let chartLucro, chartRoiMargem, chartCustos, chartSaldo;
+function initCharts(){
+  const gridColor = &#x27;rgba(255,255,255,.05)&#x27;;
+  const tickColor = &#x27;#616a7a&#x27;;
+  const fontFamily = &quot;&#x27;JetBrains Mono&#x27;, monospace&quot;;
+  Chart.defaults.font.family = fontFamily;
+  Chart.defaults.color = tickColor;
+
+  chartLucro = new Chart(document.getElementById(&#x27;chartLucro&#x27;), {
+    type:&#x27;bar&#x27;,
+    data:{ labels:[&#x27;1m&#x27;,&#x27;2m&#x27;,&#x27;3m&#x27;,&#x27;4m&#x27;,&#x27;5m&#x27;,&#x27;6m&#x27;], datasets:[{ data:[], backgroundColor:&#x27;#7c8cff&#x27;, borderRadius:5, maxBarThickness:32 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=&gt;fmtBRL(c.raw)}}},
+      scales:{ x:{grid:{display:false},border:{color:gridColor}}, y:{grid:{color:gridColor},border:{display:false},ticks:{callback:v=&gt;fmtBRLNoSign(v)}} } }
+  });
+
+  chartRoiMargem = new Chart(document.getElementById(&#x27;chartRoiMargem&#x27;), {
+    type:&#x27;line&#x27;,
+    data:{ labels:[&#x27;1m&#x27;,&#x27;2m&#x27;,&#x27;3m&#x27;,&#x27;4m&#x27;,&#x27;5m&#x27;,&#x27;6m&#x27;], datasets:[
+      { label:&#x27;ROI %&#x27;, data:[], borderColor:&#x27;#3fd7c4&#x27;, backgroundColor:&#x27;rgba(63,215,196,.12)&#x27;, tension:.3, fill:true, pointRadius:3 },
+      { label:&#x27;Margem %&#x27;, data:[], borderColor:&#x27;#7c8cff&#x27;, backgroundColor:&#x27;rgba(124,140,255,.10)&#x27;, tension:.3, fill:true, pointRadius:3 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:&#x27;top&#x27;,labels:{boxWidth:8,font:{family:&quot;&#x27;Inter&#x27;,sans-serif&quot;,size:11}}}, tooltip:{callbacks:{label:c=&gt;c.dataset.label+&#x27;: &#x27;+fmtPct(c.raw)}}},
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:gridColor},ticks:{callback:v=&gt;v+&#x27;%&#x27;}} } }
+  });
+
+  chartCustos = new Chart(document.getElementById(&#x27;chartCustos&#x27;), {
+    type:&#x27;doughnut&#x27;,
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderColor:&#x27;#11141a&#x27;, borderWidth:2 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:&#x27;68%&#x27;,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=&gt;c.label+&#x27;: &#x27;+fmtBRL(c.raw)}} } }
+  });
+
+  chartSaldo = new Chart(document.getElementById(&#x27;chartSaldo&#x27;), {
+    type:&#x27;line&#x27;,
+    data:{ labels:[&#x27;0&#x27;,&#x27;1&#x27;,&#x27;2&#x27;,&#x27;3&#x27;,&#x27;4&#x27;,&#x27;5&#x27;,&#x27;6&#x27;], datasets:[
+      { label:&#x27;Saldo financiamento&#x27;, data:[], borderColor:&#x27;#f2b035&#x27;, backgroundColor:&#x27;transparent&#x27;, tension:.25, pointRadius:2 },
+      { label:&#x27;Saldo empréstimo&#x27;, data:[], borderColor:&#x27;#f0555f&#x27;, backgroundColor:&#x27;transparent&#x27;, tension:.25, pointRadius:2 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:&#x27;top&#x27;,labels:{boxWidth:8,font:{family:&quot;&#x27;Inter&#x27;,sans-serif&quot;,size:11}}}, tooltip:{callbacks:{label:c=&gt;c.dataset.label+&#x27;: &#x27;+fmtBRL(c.raw)}}},
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:gridColor},ticks:{callback:v=&gt;fmtBRLNoSign(v)}} } }
+  });
+}
+
+function updateCharts(costItems){
+  const lucros = [], rois=[], margens=[], saldoFinArr=[0], saldoEmpArr=[0];
+  for (let m=1;m&lt;=6;m++){
+    const rm = calcular({}, m);
+    lucros.push(Math.round(rm.lucroLiquido));
+    rois.push(Number(rm.roi.toFixed(1)));
+    margens.push(Number(rm.margem.toFixed(1)));
+    saldoFinArr.push(Math.round(rm.saldoFin));
+    saldoEmpArr.push(Math.round(rm.saldoEmp));
+  }
+  chartLucro.data.datasets[0].data = lucros;
+  chartLucro.data.datasets[0].backgroundColor = lucros.map(v=&gt;v&gt;=0?&#x27;#2ed37e&#x27;:&#x27;#f0555f&#x27;);
+  chartLucro.update();
+
+  chartRoiMargem.data.datasets[0].data = rois;
+  chartRoiMargem.data.datasets[1].data = margens;
+  chartRoiMargem.update();
+
+  chartCustos.data.labels = costItems.map(i=&gt;i.name);
+  chartCustos.data.datasets[0].data = costItems.map(i=&gt;Math.round(i.val));
+  chartCustos.data.datasets[0].backgroundColor = costItems.map(i=&gt;i.color);
+  chartCustos.update();
+
+  chartSaldo.data.datasets[0].data = saldoFinArr;
+  chartSaldo.data.datasets[1].data = saldoEmpArr;
+  chartSaldo.update();
+}
+
+/* ================================================================
+   ABA CENÁRIOS
+   ================================================================ */
+function renderScenarios(){
+  const body = document.getElementById(&#x27;scenarioBody&#x27;);
+  let rows=&#x27;&#x27;;
+  for (let m=1;m&lt;=6;m++){
+    const r = calcular({}, m);
+    const active = m===state.mesVenda ? &#x27;active-row&#x27;:&#x27;&#x27;;
+    rows += `&lt;tr class=&quot;${active}&quot;&gt;
+      &lt;td class=&quot;label-cell&quot;&gt;${m} ${m===1?&#x27;mês&#x27;:&#x27;meses&#x27;}${m===state.mesVenda?&#x27; · selecionado&#x27;:&#x27;&#x27;}&lt;/td&gt;
+      &lt;td class=&quot;${r.lucroLiquido&gt;=0?&#x27;pos&#x27;:&#x27;neg&#x27;}&quot;&gt;${fmtBRL(r.lucroLiquido)}&lt;/td&gt;
+      &lt;td class=&quot;${r.roi&gt;=0?&#x27;pos&#x27;:&#x27;neg&#x27;}&quot;&gt;${fmtPct(r.roi)}&lt;/td&gt;
+      &lt;td class=&quot;${r.margem&gt;=0?&#x27;pos&#x27;:&#x27;neg&#x27;}&quot;&gt;${fmtPct(r.margem)}&lt;/td&gt;
+      &lt;td&gt;${fmtBRL(r.saldoFin)}&lt;/td&gt;
+      &lt;td&gt;${fmtBRL(r.saldoEmp)}&lt;/td&gt;
+      &lt;td&gt;${fmtBRL(r.custosOperacionais)}&lt;/td&gt;
+    &lt;/tr&gt;`;
+  }
+  body.innerHTML = rows;
+}
+
+/* ================================================================
+   ABA PONTO DE EQUILÍBRIO
+   ================================================================ */
+function renderBreakeven(){
+  const targets = [
+    [&#x27;Empatar (lucro zero)&#x27;, 0],
+    [&#x27;Ganhar R$ 20.000&#x27;, 20000],
+    [&#x27;Ganhar R$ 30.000&#x27;, 30000],
+    [&#x27;Ganhar R$ 50.000&#x27;, 50000],
+    [&#x27;Ganhar R$ 100.000&#x27;, 100000],
+  ];
+  const body = document.getElementById(&#x27;breakevenBody&#x27;);
+  body.innerHTML = targets.map(([label, target])=&gt;{
+    const venda = resolverVendaMinima(target, state.mesVenda);
+    const r = calcular({valorVenda: venda}, state.mesVenda);
+    return `&lt;tr&gt;
+      &lt;td class=&quot;label-cell&quot;&gt;${label}&lt;/td&gt;
+      &lt;td&gt;${fmtBRL(venda)}&lt;/td&gt;
+      &lt;td&gt;${fmtPct(r.margem)}&lt;/td&gt;
+      &lt;td&gt;${fmtPct(r.roi)}&lt;/td&gt;
+    &lt;/tr&gt;`;
+  }).join(&#x27;&#x27;);
+}
+
+/* ================================================================
+   ABA PREÇO MÁXIMO DE COMPRA
+   ================================================================ */
+const maxPriceTargetsVenda = [];
+function initMaxPriceInputs(){
+  if (maxPriceTargetsVenda.length) return;
+  maxPriceTargetsVenda.push(state.valorVenda-20000, state.valorVenda, state.valorVenda+20000);
+  const wrap = document.getElementById(&#x27;targetVendaInputs&#x27;);
+  wrap.innerHTML=&#x27;&#x27;;
+  maxPriceTargetsVenda.forEach((v,i)=&gt;{
+    const div = document.createElement(&#x27;div&#x27;);
+    div.className=&#x27;mini-card&#x27;;
+    div.innerHTML = `&lt;div class=&quot;mini-card-label&quot;&gt;Preço de venda alvo ${i+1}&lt;/div&gt;
+      &lt;div class=&quot;input-wrap&quot;&gt;&lt;span class=&quot;prefix&quot;&gt;R$&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;mp_target_${i}&quot;&gt;&lt;/div&gt;`;
+    wrap.appendChild(div);
+  });
+  maxPriceTargetsVenda.forEach((v,i)=&gt;{
+    const input = document.getElementById(&#x27;mp_target_&#x27;+i);
+    setCurrencyDisplay(input, v);
+    attachCurrencyMask(input);
+    input.addEventListener(&#x27;input&#x27;, ()=&gt;{
+      maxPriceTargetsVenda[i] = parseFloat(input.dataset.numeric)||0;
+      renderMaxPrice();
+    });
+  });
+}
+function renderMaxPrice(){
+  initMaxPriceInputs();
+  const targetLucros = [20000,30000,50000,100000];
+  const head = document.getElementById(&#x27;maxPriceHead&#x27;);
+  head.innerHTML = &#x27;&lt;th&gt;Venda alvo&lt;/th&gt;&#x27; + targetLucros.map(t=&gt;`&lt;th&gt;Lucro de ${fmtBRLNoSign(t)}&lt;/th&gt;`).join(&#x27;&#x27;);
+  const body = document.getElementById(&#x27;maxPriceBody&#x27;);
+  body.innerHTML = maxPriceTargetsVenda.map(venda=&gt;{
+    const cells = targetLucros.map(lucro=&gt;{
+      const compraMax = resolverCompraMaxima(venda, lucro, state.mesVenda);
+      return `&lt;td&gt;${fmtBRL(compraMax)}&lt;/td&gt;`;
+    }).join(&#x27;&#x27;);
+    return `&lt;tr&gt;&lt;td class=&quot;label-cell&quot;&gt;${fmtBRL(venda)}&lt;/td&gt;${cells}&lt;/tr&gt;`;
+  }).join(&#x27;&#x27;);
+}
+
+/* ================================================================
+   EXPORTAR RESUMO EM .TXT (para copiar/colar ou mandar no WhatsApp)
+   ================================================================ */
+function exportarResumoTxt(){
+  const s = state;
+  const r = calcular({}, s.mesVenda);
+  const linhas = [];
+  const L = &#x27;─&#x27;.repeat(38);
+  const hoje = new Date().toLocaleDateString(&#x27;pt-BR&#x27;);
+  const add = (txt=&#x27;&#x27;) =&gt; linhas.push(txt);
+  const item = (label, val) =&gt; linhas.push(`${label}: ${val}`);
+
+  add(&#x27;🏠 FLIPDESK — RESUMO DA SIMULAÇÃO&#x27;);
+  add(`Gerado em ${hoje}`);
+  add(L);
+
+  add(&#x27;&#x27;);
+  add(&#x27;📍 AQUISIÇÃO &amp; FINANCIAMENTO&#x27;);
+  item(&#x27;Valor de compra&#x27;, fmtBRL(s.compra));
+  item(&#x27;Valor esperado de venda&#x27;, fmtBRL(s.valorVenda));
+  item(&#x27;Entrada&#x27;, `${fmtPct(s.entradaPct,1)} = ${fmtBRL(r.entrada)}`);
+  item(&#x27;Valor financiado&#x27;, fmtBRL(r.valorFinanciado));
+  item(&#x27;Taxa do financiamento&#x27;, fmtPct(s.taxaFinanciamento,2) + &#x27; a.a.&#x27;);
+  item(&#x27;Prazo do financiamento&#x27;, s.prazoFinanciamento + &#x27; meses&#x27;);
+  item(&#x27;Sistema de amortização&#x27;, s.sistemaAmortizacao === &#x27;PRICE&#x27; ? &#x27;PRICE (parcela fixa)&#x27; : &#x27;SAC (amortização constante)&#x27;);
+
+  add(&#x27;&#x27;);
+  add(&#x27;🏦 EMPRÉSTIMO PONTE&#x27;);
+  item(&#x27;Modo&#x27;, s.aporteCapitalEnabled ? &#x27;Com aporte de capital próprio&#x27; : &#x27;Autofinanciado (sem aporte)&#x27;);
+  if (s.aporteCapitalEnabled) item(&#x27;Valor do aporte&#x27;, fmtBRL(r.aporte));
+  item(&#x27;Valor do empréstimo (calculado)&#x27;, fmtBRL(r.valorEmprestimo));
+  item(&#x27;Taxa do empréstimo&#x27;, fmtPct(s.taxaEmprestimo,2) + &#x27; a.m.&#x27;);
+  item(&#x27;Prazo do empréstimo&#x27;, s.prazoEmprestimo + &#x27; meses&#x27;);
+  item(&#x27;Carência&#x27;, `${CARENCIA_PAGAMENTO_MESES} meses (90 dias) — sem pagamento; juros incorporados ao saldo`);
+
+  add(&#x27;&#x27;);
+  add(&#x27;🔨 REFORMA&#x27;);
+  item(&#x27;Valor da reforma&#x27;, fmtBRL(s.valorReforma));
+  item(&#x27;Reserva de contingência&#x27;, `${fmtPct(s.reservaContingenciaPct,0)} = ${fmtBRL(r.reserva)}`);
+  if (s.cartaoCreditoEnabled &amp;&amp; r.cartaoValor &gt; 0){
+    item(&#x27;Parte no cartão de crédito&#x27;, fmtBRL(r.cartaoValor));
+    item(&#x27;Parcelamento do cartão&#x27;, `${s.prazoCartaoCredito}x de ${fmtBRL(r.parcelaCartao)}`);
+    item(&#x27;Taxa do cartão&#x27;, fmtPct(s.taxaCartaoCredito,2) + &#x27; a.m.&#x27;);
+    item(&#x27;Juros do cartão até a venda&#x27;, fmtBRL(r.jurosCartao));
+  }
+
+  add(&#x27;&#x27;);
+  add(&#x27;🧾 CUSTOS DE AQUISIÇÃO&#x27;);
+  item(&#x27;ITBI&#x27;, `${fmtPct(s.itbiPct,2)} = ${fmtBRL(r.itbi)}`);
+  item(&#x27;Custos cartorários (&#x27;+fmtPct(s.cartorioPct,2)+&#x27;)&#x27;, fmtBRL(r.custoCartorio));
+  item(&#x27;Escritura separada&#x27;, fmtBRL(0));
+  item(&#x27;Avaliação bancária&#x27;, fmtBRL(s.taxasBancarias));
+
+  add(&#x27;&#x27;);
+  add(&#x27;📅 CUSTOS MENSAIS DE CARREGAMENTO&#x27;);
+  item(&#x27;Condomínio&#x27;, fmtBRL(s.condominioMensal));
+  item(&#x27;IPTU&#x27;, fmtBRL(s.iptuMensal));
+  item(&#x27;Seguro mensal&#x27;, fmtBRL(s.seguro));
+  item(&#x27;Mês previsto de venda&#x27;, s.mesVenda + (s.mesVenda===1?&#x27; mês&#x27;:&#x27; meses&#x27;));
+
+  add(&#x27;&#x27;);
+  add(&#x27;💰 VENDA &amp; IMPOSTOS&#x27;);
+  item(&#x27;Corretagem&#x27;, `${fmtPct(s.corretagemPct,1)} = ${fmtBRL(r.corretagem)}`);
+  item(&#x27;Imposto sobre ganho de capital&#x27;, s.impostoGanhoCapitalEnabled ? `${fmtPct(s.impostoGanhoCapitalPct,0)} = ${fmtBRL(r.imposto)}` : &#x27;Não considerado&#x27;);
+  item(&#x27;Despesas diversas&#x27;, fmtBRL(s.despesasDiversas));
+
+  add(&#x27;&#x27;);
+  add(L);
+  add(&#x27;📊 RESULTADO DA OPERAÇÃO&#x27;);
+  item(&#x27;Lucro líquido&#x27;, fmtBRL(r.lucroLiquido));
+  item(&#x27;Sobra no bolso&#x27;, fmtBRL(r.sobraFinal));
+  if (!s.aporteCapitalEnabled){
+    item(&#x27;Capital próprio necessário&#x27;, &#x27;praticamente R$ 0,00 (100% autofinanciado)&#x27;);
+    add(&#x27;⚠️ ROI/margem sobre capital próprio não se aplicam nesse cenário (capital investido ~zero).&#x27;);
+  } else {
+    item(&#x27;ROI&#x27;, fmtPct(r.roi,1));
+    item(&#x27;Capital próprio necessário&#x27;, fmtBRL(r.capitalProprio));
+  }
+  item(&#x27;Margem sobre a venda&#x27;, fmtPct(r.margem,1));
+  add(L);
+
+  const conteudo = linhas.join(&#x27;\n&#x27;);
+
+  const blob = new Blob([conteudo], {type:&#x27;text/plain;charset=utf-8&#x27;});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement(&#x27;a&#x27;);
+  a.href = url;
+  a.download = `flipdesk-resumo-${hoje.replace(/\//g,&#x27;-&#x27;)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ================================================================
+   RECALCULA TUDO
+   ================================================================ */
+function recalcAll(){
+  const r = calcular({}, state.mesVenda);
+  renderComputedFields(r);
+  const statusInfo = renderHero(r);
+  renderSummary(r);
+  renderParcelas(r);
+  renderWaterfall(r);
+  renderFlow(r);
+  const costItems = renderCosts(r);
+  const checklistInfo = renderChecklistAndScore(r);
+  renderConclusion(r, statusInfo, checklistInfo);
+  updateCharts(costItems);
+
+  // Se as abas de análise já estiverem visíveis, mantém sincronizadas
+  if (document.getElementById(&#x27;panel-scenarios&#x27;).classList.contains(&#x27;active&#x27;)) renderScenarios();
+  if (document.getElementById(&#x27;panel-breakeven&#x27;).classList.contains(&#x27;active&#x27;)) renderBreakeven();
+  if (document.getElementById(&#x27;panel-maxprice&#x27;).classList.contains(&#x27;active&#x27;)) renderMaxPrice();
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+document.addEventListener(&#x27;DOMContentLoaded&#x27;, ()=&gt;{
+  initInputs();
+  initMonthPills();
+  initTabs();
+  initCharts();
+  recalcAll();
+});
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
 </section>
 
 <div class="gastos-modal" id="gModal">
@@ -1121,21 +2895,26 @@ async function deleteGasto(id){
 
 function setActiveTab(tab){
   const visitas = tab === 'visitas';
+  const gastos = tab === 'gastos';
+  const simulacao = tab === 'simulacao';
 
   $g('tabVisitas').classList.toggle('active', visitas);
-  $g('tabGastos').classList.toggle('active', !visitas);
-  $g('gastosPanel').classList.toggle('active', !visitas);
+  $g('tabGastos').classList.toggle('active', gastos);
+  $g('tabSimulacao').classList.toggle('active', simulacao);
+  $g('gastosPanel').classList.toggle('active', gastos);
+  $g('simulacaoPanel').classList.toggle('active', simulacao);
 
   // O cabeçalho, estatísticas, lista e rodapé pertencem SOMENTE à aba Visitas.
   document.querySelector('header.top').style.display = visitas ? '' : 'none';
   document.querySelector('main').style.display = visitas ? '' : 'none';
   document.querySelector('footer.appfoot').style.display = visitas ? '' : 'none';
 
-  if(!visitas) renderGastos();
+  if(gastos) renderGastos();
 }
 
 $g('tabVisitas').addEventListener('click',()=>setActiveTab('visitas'));
 $g('tabGastos').addEventListener('click',()=>setActiveTab('gastos'));
+$g('tabSimulacao').addEventListener('click',()=>setActiveTab('simulacao'));
 
 // Aba inicial: GASTOS.
 setActiveTab('gastos');
