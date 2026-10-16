@@ -1212,11 +1212,13 @@ function calcular(overrides, M){
   const custoSeguro = s.seguro * M;
 
   // Parcelas do financiamento do imóvel e do cartão que vencem até a venda.
-  // O próprio empréstimo ponte NÃO financia suas próprias parcelas/juros para evitar circularidade.
+  // Reserva fixa para custear parcelas do próprio empréstimo a partir do mês 2.
   const parcelasFinAteVenda = schedFin.slice(0, Math.min(M, schedFin.length)).reduce((a,b)=&gt;a+b.parcela, 0);
   const parcelasCartaoAteVenda = schedCartao.slice(0, Math.min(M, schedCartao.length)).reduce((a,b)=&gt;a+b.parcela, 0);
 
+  const parcelasProprioEmprestimoReservadas = Math.max(M - 1, 0) * 3500;
   const necessidadeEmprestimo =
+    parcelasProprioEmprestimoReservadas +
     entrada +
     reformaLiquidaCartao +
     reserva +
@@ -1295,7 +1297,7 @@ function calcular(overrides, M){
   return {
     compra, valorVenda, entrada, valorFinanciado, valorEmprestimo, necessidadeBase, aporte,
     saldoFin, saldoEmp, jurosFin, jurosEmp, itbi, custoCartorio, custosAquisicao, reserva, custosMensais,
-    necessidadeEmprestimo, reformaLiquidaCartao, custoCondominio, custoIptu, custoSeguro, parcelasFinAteVenda, parcelasCartaoAteVenda,
+    necessidadeEmprestimo, parcelasProprioEmprestimoReservadas, reformaLiquidaCartao, custoCondominio, custoIptu, custoSeguro, parcelasFinAteVenda, parcelasCartaoAteVenda,
     corretagem, ganhoCapital, imposto, custoTotal, lucroLiquido, capitalProprio, roi, margem,
     retornoCompra, sobraFinal, custosOperacionais: custoTotal - compra, M,
     cartaoValor, saldoCartao, jurosCartao, parcelaCartao,
@@ -1955,6 +1957,7 @@ function renderLoanBreakdown(r){
     {label:&#x27;Condomínio até a venda&#x27;, detail:`${r.M} mês(es) × ${fmtBRL(state.condominioMensal)}`, value:r.custoCondominio},
     {label:&#x27;IPTU até a venda&#x27;, detail:`${r.M} mês(es) × ${fmtBRL(state.iptuMensal)}`, value:r.custoIptu},
     {label:&#x27;Seguro até a venda&#x27;, detail:`${r.M} mês(es) × ${fmtBRL(state.seguro)}`, value:r.custoSeguro},
+    {label:&#x27;Reserva para parcelas do próprio empréstimo&#x27;, detail:`${Math.max(r.M-1,0)} mês(es), do mês 2 até a venda × R$ 3.500,00`, value:r.parcelasProprioEmprestimoReservadas},
     {label:&#x27;Parcelas do financiamento até a venda&#x27;, detail:&#x27;parcelas que vencem até o mês selecionado para venda&#x27;, value:r.parcelasFinAteVenda},
     {label:&#x27;Parcelas do cartão até a venda&#x27;, detail:&#x27;parcelas da reforma no cartão que vencem até a venda&#x27;, value:r.parcelasCartaoAteVenda},
     {label:&#x27;Aporte de capital próprio&#x27;, detail:&#x27;reduz o valor necessário de empréstimo&#x27;, value:r.aporte, minus:true}
@@ -1974,7 +1977,7 @@ function renderLoanBreakdown(r){
     `&lt;b&gt;FÓRMULA APLICADA:&lt;/b&gt; ${formula || &#x27;Nenhum valor preenchido&#x27;} = &lt;b&gt;${fmtBRL(r.valorEmprestimo)}&lt;/b&gt;.`;
 
   document.getElementById(&#x27;loanBreakdownExcluded&#x27;).innerHTML =
-    `&lt;b&gt;Observação:&lt;/b&gt; itens com valor R$ 0,00 não são exibidos. As parcelas e os juros do próprio empréstimo ponte não entram no principal para evitar cálculo circular.`;
+    `&lt;b&gt;Observação:&lt;/b&gt; itens com valor R$ 0,00 não são exibidos. A reserva de R$ 3.500,00 mensais a partir do mês 2 integra o principal do empréstimo. O cronograma financeiro e a carência contratual permanecem inalterados.`;
 }
 
 function initLoanBreakdown(){
