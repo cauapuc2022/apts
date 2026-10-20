@@ -279,6 +279,16 @@
   .gastos-form-row{display:grid;grid-template-columns:1fr 1fr;gap:13px}
   .gastos-form input,.gastos-form select,.gastos-form textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:7px;padding:10px;font:inherit}
   .gastos-form textarea{min-height:85px;resize:vertical}
+  /* Correção pontual: impede campos de expandirem além do modal de edição. */
+  #gModal .gastos-modal-box{min-width:0;max-width:min(560px,100%);overflow-x:hidden}
+  #gModal .gastos-form{min-width:0;grid-template-columns:minmax(0,1fr)}
+  #gModal .gastos-form-row{min-width:0;grid-template-columns:repeat(2,minmax(0,1fr))}
+  #gModal .gastos-form-row > div,#gModal .gastos-form > div{min-width:0;max-width:100%}
+  #gModal .gastos-form input,#gModal .gastos-form select,#gModal .gastos-form textarea{display:block;min-width:0;max-width:100%;box-sizing:border-box}
+  #gModal .gasto-upload-box{min-width:0;overflow-wrap:anywhere}
+  #gModal .gasto-file{min-width:0;max-width:100%}
+  @media(max-width:600px){#gModal .gastos-form-row{grid-template-columns:minmax(0,1fr)}}
+
   .gastos-form-foot{padding:15px 22px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
   @media(max-width:800px){.gastos-cards{grid-template-columns:1fr 1fr}}
   @media(max-width:600px){.gastos-form-row{grid-template-columns:1fr}.gastos-cards{grid-template-columns:1fr 1fr}}
