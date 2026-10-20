@@ -2049,6 +2049,13 @@ document.addEventListener(&#x27;DOMContentLoaded&#x27;, ()=&gt;{
     </div>
   </div>
 </div>
+<div class="gastos-modal" id="gPreviewModal" role="dialog" aria-modal="true" aria-label="Visualizador de comprovante" style="z-index:300">
+  <div class="gastos-modal-box" style="max-width:960px;width:100%">
+    <div class="gastos-modal-head" style="align-items:center;gap:12px"><h3 id="gPreviewName" style="overflow-wrap:anywhere">Comprovante</h3><button type="button" class="close-x" id="gPreviewClose" aria-label="Fechar">×</button></div>
+    <div id="gPreviewContent" style="padding:16px;text-align:center;min-height:100px"></div>
+    <div class="gastos-form-foot"><button type="button" class="gasto-btn" id="gPreviewCloseFoot">Fechar</button><button type="button" class="btn btn-primary" id="gPreviewDownload">Baixar comprovante</button></div>
+  </div>
+</div>
 <datalist id="gCatList"><option value="Material"><option value="Mão de obra"><option value="Ferramentas"><option value="Transporte"><option value="Alimentação"><option value="Serviços"><option value="Outros"></datalist>
 
 <main>
@@ -2657,6 +2664,48 @@ async function gDeleteFileChunks(gastoId,fileId,total){
     await deleteDoc(doc(gastosCol,`__filechunk__${gSafePart(gastoId)}__${gSafePart(fileId)}__${String(i).padStart(5,'0')}`));
   }
 }
+async function gBuildFileBlob(gastoId,fileMeta){
+  const parts=[];
+  for(let i=0;i<fileMeta.chunks;i++){
+    const chunkId=`__filechunk__${gSafePart(gastoId)}__${gSafePart(fileMeta.id)}__${String(i).padStart(5,'0')}`;
+    const cached=gastoChunkCache.get(chunkId);
+    if(!cached?.data) throw new Error('Parte do arquivo ainda não sincronizou. Aguarde alguns segundos.');
+    const b64=String(cached.data).split(',')[1]||'';
+    const bin=atob(b64), arr=new Uint8Array(bin.length);
+    for(let j=0;j<bin.length;j++) arr[j]=bin.charCodeAt(j);
+    parts.push(arr);
+  }
+  const name=String(fileMeta.name||'');
+  const ext=name.split('.').pop().toLowerCase();
+  const types={pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',txt:'text/plain'};
+  return new Blob(parts,{type:types[ext]||fileMeta.type||'application/octet-stream'});
+}
+let gPreviewUrl=null;
+function gClosePreview(){
+  document.getElementById('gPreviewModal').classList.remove('open');
+  document.getElementById('gPreviewContent').replaceChildren();
+  if(gPreviewUrl){URL.revokeObjectURL(gPreviewUrl);gPreviewUrl=null;}
+}
+async function gPreviewFile(gastoId,fileMeta){
+  try{
+    toast('Preparando visualização...');
+    const blob=await gBuildFileBlob(gastoId,fileMeta);
+    gClosePreview();
+    gPreviewUrl=URL.createObjectURL(blob);
+    const content=document.getElementById('gPreviewContent');
+    document.getElementById('gPreviewName').textContent=fileMeta.name||'Comprovante';
+    const type=blob.type;
+    if(type.startsWith('image/')){
+      const img=document.createElement('img');img.src=gPreviewUrl;img.alt=fileMeta.name||'Comprovante';img.style.cssText='max-width:100%;max-height:75vh;object-fit:contain;';content.appendChild(img);
+    }else if(type==='application/pdf'||type==='text/plain'){
+      const frame=document.createElement('iframe');frame.src=gPreviewUrl;frame.title='Visualização do comprovante';frame.style.cssText='width:100%;height:72vh;border:0;background:white;';content.appendChild(frame);
+    }else{
+      const msg=document.createElement('p');msg.textContent='Este formato não oferece visualização direta no navegador. Use Baixar para abrir o arquivo no seu dispositivo.';content.appendChild(msg);
+    }
+    document.getElementById('gPreviewDownload').onclick=()=>gDownloadFile(gastoId,fileMeta);
+    document.getElementById('gPreviewModal').classList.add('open');
+  }catch(err){console.error(err);toast('Erro ao visualizar anexo: '+(err?.message||err));}
+}
 async function gDownloadFile(gastoId,fileMeta){
   try{
     toast('Preparando anexo...');
@@ -2715,7 +2764,7 @@ function renderGastos(){
       <td>${gDateFmt(g.data)}</td>
       <td><strong>${gEsc(g.nome)}</strong></td>
       <td>${gEsc(g.categoria||'-')}</td>
-      <td>${gEsc(g.descricao||'-')}${(g.arquivos||[]).length?`<div class="gasto-files">${g.arquivos.map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name" title="${gEsc(f.name)}">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button data-g-download="${g.id}" data-file-id="${f.id}">Abrir</button></div>`).join('')}</div>`:''}</td>
+      <td>${gEsc(g.descricao||'-')}${(g.arquivos||[]).length?`<div class="gasto-files">${g.arquivos.map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name" title="${gEsc(f.name)}">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button data-g-preview="${g.id}" data-file-id="${f.id}">Visualizar</button><button data-g-download="${g.id}" data-file-id="${f.id}">Baixar</button></div>`).join('')}</div>`:''}</td>
       <td>${gEsc(g.metodoPagamento||'-')}</td>
       <td class="gasto-money">${gMoney(g.valor)}</td>
       <td><div class="gasto-actions">
@@ -2726,6 +2775,7 @@ function renderGastos(){
 
   document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>openGasto(b.dataset.gEdit));
   document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>deleteGasto(b.dataset.gDel));
+  document.querySelectorAll('[data-g-preview]').forEach(b=>b.onclick=()=>{const g=gastosData.find(x=>x.id===b.dataset.gPreview);const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.fileId);if(g&&f)gPreviewFile(g.id,f);});
   document.querySelectorAll('[data-g-download]').forEach(b=>b.onclick=()=>{ const g=gastosData.find(x=>x.id===b.dataset.gDownload); const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.fileId); if(g&&f) gDownloadFile(g.id,f); });
 }
 
@@ -2753,14 +2803,18 @@ function openGasto(id=null){
 }
 function renderGastoFileEditors(g){
   $g('gPendingFiles').innerHTML=gastoPendingFiles.map((f,i)=>`<div>＋ ${gEsc(f.name)} (${gFormatBytes(f.size)}) <button type="button" class="gasto-btn" data-pending-remove="${i}">remover</button></div>`).join('');
-  $g('gExistingFiles').innerHTML=(g?.arquivos||[]).map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button type="button" data-existing-open="${f.id}">Abrir</button><button type="button" class="danger" data-existing-remove="${f.id}">Excluir</button></div>`).join('');
+  $g('gExistingFiles').innerHTML=(g?.arquivos||[]).map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button type="button" data-existing-open="${f.id}">Visualizar</button><button type="button" data-existing-download="${f.id}">Baixar</button><button type="button" class="danger" data-existing-remove="${f.id}">Excluir</button></div>`).join('');
   document.querySelectorAll('[data-pending-remove]').forEach(b=>b.onclick=()=>{gastoPendingFiles.splice(Number(b.dataset.pendingRemove),1);renderGastoFileEditors(g);});
-  document.querySelectorAll('[data-existing-open]').forEach(b=>b.onclick=()=>{const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.existingOpen);if(f)gDownloadFile(g.id,f);});
+  document.querySelectorAll('[data-existing-open]').forEach(b=>b.onclick=()=>{const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.existingOpen);if(f)gPreviewFile(g.id,f);});
+  document.querySelectorAll('[data-existing-download]').forEach(b=>b.onclick=()=>{const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.existingDownload);if(f)gDownloadFile(g.id,f);});
   document.querySelectorAll('[data-existing-remove]').forEach(b=>b.onclick=async()=>{
     const f=(g?.arquivos||[]).find(x=>x.id===b.dataset.existingRemove); if(!f||!confirm(`Excluir o anexo "${f.name}"?`))return;
     try{ await gDeleteFileChunks(g.id,f.id,f.chunks); const arquivos=(g.arquivos||[]).filter(x=>x.id!==f.id); await setDoc(doc(gastosCol,g.id),{arquivos,atualizadoEm:Date.now()},{merge:true}); toast('Anexo excluído'); }catch(err){toast('Erro ao excluir anexo: '+(err?.message||err));}
   });
 }
+document.getElementById('gPreviewClose').onclick=gClosePreview;
+document.getElementById('gPreviewCloseFoot').onclick=gClosePreview;
+document.getElementById('gPreviewModal').addEventListener('click',e=>{if(e.target.id==='gPreviewModal')gClosePreview();});
 function closeGasto(){ $g('gModal').classList.remove('open'); gastoEditingId=null; gastoPendingFiles=[]; }
 
 $g('gFiles').addEventListener('change',e=>{
