@@ -2645,8 +2645,6 @@ init();
    ============================================================ */
 const gastosCol = collection(db, 'gastos');
 let gastosData = [];
-// Atualiza o nome antigo da categoria na interface e nos próximos salvamentos.
-function normalizarCategoriaGasto(c){return /^acess[oó]rios do ap$/i.test(String(c||'').trim()) ? 'Eletrodomésticos' : c;}
 let gastoEditingId = null;
 let gastoPendingFiles = [];
 const GASTO_FILE_MAX_BYTES = 20 * 1024 * 1024; // 20 MB por arquivo
@@ -2764,7 +2762,7 @@ function renderGastos(){
 
   const cats=[...new Set(gastosData.map(g=>g.categoria).filter(Boolean))].sort();
   const current=$g('gCategory').value;
-  $g('gCategory').innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${gEsc(c)}">${gEsc(c)}</option>`).join('');
+  $g('gCategory').innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${gEsc(c)}">${gEsc(/^acess[oó]rios do apt\.?$/i.test(c.trim()) ? "Eletrodomésticos" : c)}</option>`).join('');
   if(cats.includes(current)) $g('gCategory').value=current;
   const payments=[...new Set(gastosData.map(g=>g.metodoPagamento).filter(Boolean))].sort();
   const currentPayment=$g('gPaymentFilter').value;
@@ -2846,7 +2844,7 @@ async function saveGasto(){
   const id=gastoEditingId||('gasto-'+Date.now()+'-'+Math.random().toString(36).slice(2,8));
   const fields={
     nome, valor,
-    categoria:normalizarCategoriaGasto($g('gCat').value.trim())||'Outros',
+    categoria:$g('gCat').value.trim()||'Outros',
     data,
     metodoPagamento:$g('gPayment').value.trim(),
     descricao:$g('gDesc').value.trim(),
@@ -2966,7 +2964,7 @@ onSnapshot(gastosCol,snap=>{
   const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
   gastoChunkCache.clear();
   docs.filter(d=>d._type==='fileChunk').forEach(d=>gastoChunkCache.set(d.id,d));
-  gastosData=docs.filter(d=>d._type!=='fileChunk' && !d.id.startsWith('__filechunk__')).map(d=>({...d,categoria:normalizarCategoriaGasto(d.categoria)}));
+  gastosData=docs.filter(d=>d._type!=='fileChunk' && !d.id.startsWith('__filechunk__'));
   renderGastos();
 },err=>{
   console.error('Firebase gastos:',err);
