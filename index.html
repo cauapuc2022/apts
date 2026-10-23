@@ -2751,7 +2751,10 @@ function getGastosFiltered(){
   return gastosData.filter(g=>{
     const text=`${g.nome||''} ${g.descricao||''} ${g.categoria||''} ${g.metodoPagamento||''}`.toLowerCase();
     return (!generalFilter||(g.filtroGeral||'')===generalFilter)&&(!q||text.includes(q))&&(!cat||g.categoria===cat)&&(!paymentFilter||(g.metodoPagamento||'')===paymentFilter)&&(!from||g.data>=from)&&(!to||g.data<=to);
-  }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  }).sort((a,b)=>{
+    const criado = g => Number(g.criadoEm) || Number((String(g.id||'').match(/^gasto-(\d{13})-/)||[])[1]) || Number(g.atualizadoEm) || 0;
+    return criado(b)-criado(a) || String(b.id||'').localeCompare(String(a.id||''));
+  });
 }
 
 function setG(id,txt){ const el=$g(id); if(el) el.textContent=txt; }
@@ -2855,7 +2858,8 @@ async function saveGasto(){
     data,
     metodoPagamento:$g('gPayment').value.trim(),
     descricao:$g('gDesc').value.trim(),
-    atualizadoEm:Date.now()
+    atualizadoEm:Date.now(),
+    ...(!gastoEditingId ? {criadoEm:Date.now()} : {})
   };
   try{
     const existing=gastoEditingId?gastosData.find(x=>x.id===gastoEditingId):null;
