@@ -251,13 +251,14 @@
   .gastos-table td:nth-child(1)::before{content:"Data"}
   .gastos-table td:nth-child(2)::before{content:"Nome do gasto"}
   .gastos-table td:nth-child(3)::before{content:"Categoria"}
-  .gastos-table td:nth-child(4)::before{content:"Descrição"}
-  .gastos-table td:nth-child(5)::before{content:"Método de pagamento"}
-  .gastos-table td:nth-child(6)::before{content:"Valor"}
-  .gastos-table td:nth-child(7)::before{content:"Ações"}
+  .gastos-table td:nth-child(4)::before{content:"Filtro geral"}
+  .gastos-table td:nth-child(5)::before{content:"Descrição"}
+  .gastos-table td:nth-child(6)::before{content:"Método de pagamento"}
+  .gastos-table td:nth-child(7)::before{content:"Valor"}
+  .gastos-table td:nth-child(8)::before{content:"Ações"}
   .gastos-table td:nth-child(2) strong{font-size:16px;color:var(--navy)}
-  .gastos-table td:nth-child(6){font-size:17px}
-  .gastos-table td:nth-child(7){padding-top:5px;border-top:1px dashed var(--line)}
+  .gastos-table td:nth-child(7){font-size:17px}
+  .gastos-table td:nth-child(8){padding-top:5px;border-top:1px dashed var(--line)}
   .gasto-actions{display:flex;gap:5px}
   .gasto-btn{border:1px solid var(--line);background:#fff;padding:7px 9px;border-radius:6px;cursor:pointer;font-weight:600}
   .gasto-btn.danger{color:var(--red)}
@@ -333,6 +334,7 @@
 
   <div class="gastos-tools">
     <div class="gastos-field"><label>Buscar</label><input id="gSearch" placeholder="Nome, descrição, categoria ou pagamento"></div>
+    <div class="gastos-field"><label>FILTRO GERAL</label><select id="gGeneralFilter"><option value="">Todos</option><option value="AQUISIÇÃO DO APT">AQUISIÇÃO DO APT</option><option value="ELETRODOMÉSTICOS">ELETRODOMÉSTICOS</option><option value="OBRA">OBRA</option></select></div>
     <div class="gastos-field"><label>Categoria</label><select id="gCategory"><option value="">Todas</option></select></div>
     <div class="gastos-field"><label>Tipo de pagamento</label><select id="gPaymentFilter"><option value="">Todos</option></select></div>
     <div class="gastos-field"><label>De</label><input id="gFrom" type="date"></div>
@@ -342,7 +344,7 @@
 
   <div class="gastos-table-wrap">
     <table class="gastos-table">
-      <thead><tr><th>Data</th><th>Nome do gasto</th><th>Categoria</th><th>Descrição</th><th>Método de pagamento</th><th>Valor</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Data</th><th>Nome do gasto</th><th>Categoria</th><th>Filtro geral</th><th>Descrição</th><th>Método de pagamento</th><th>Valor</th><th>Ações</th></tr></thead>
       <tbody id="gTbody"></tbody>
     </table>
   </div>
@@ -2043,6 +2045,7 @@ document.addEventListener(&#x27;DOMContentLoaded&#x27;, ()=&gt;{
         <div><label>Categoria</label><input id="gCat" list="gCatList" placeholder="Ex.: Material"></div>
         <div><label>Data *</label><input id="gDate" type="date"></div>
       </div>
+      <div><label>FILTRO GERAL</label><select id="gGeneral"><option value="">Selecione</option><option value="AQUISIÇÃO DO APT">AQUISIÇÃO DO APT</option><option value="ELETRODOMÉSTICOS">ELETRODOMÉSTICOS</option><option value="OBRA">OBRA</option></select></div>
       <div><label>Método de pagamento *</label><select id="gPayment" required><option value="">Selecione o método de pagamento</option><option value="Cartão de Crédito">Cartão de Crédito</option><option value="Dinheiro Vivo">Dinheiro Vivo</option><option value="Pix - Empréstimo">Pix - Empréstimo</option><option value="Débito - Empréstimo">Débito - Empréstimo</option></select></div>
       <div><label>Descrição</label><textarea id="gDesc" placeholder="Detalhes do gasto..."></textarea></div>
       <div class="gasto-upload-box">
@@ -2744,9 +2747,10 @@ function getGastosFiltered(){
   const q=$g('gSearch').value.trim().toLowerCase();
   const cat=$g('gCategory').value, from=$g('gFrom').value, to=$g('gTo').value;
   const paymentFilter=$g('gPaymentFilter').value;
+  const generalFilter=$g('gGeneralFilter').value;
   return gastosData.filter(g=>{
     const text=`${g.nome||''} ${g.descricao||''} ${g.categoria||''} ${g.metodoPagamento||''}`.toLowerCase();
-    return (!q||text.includes(q))&&(!cat||g.categoria===cat)&&(!paymentFilter||(g.metodoPagamento||'')===paymentFilter)&&(!from||g.data>=from)&&(!to||g.data<=to);
+    return (!generalFilter||(g.filtroGeral||'')===generalFilter)&&(!q||text.includes(q))&&(!cat||g.categoria===cat)&&(!paymentFilter||(g.metodoPagamento||'')===paymentFilter)&&(!from||g.data>=from)&&(!to||g.data<=to);
   }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
 }
 
@@ -2762,7 +2766,7 @@ function renderGastos(){
 
   const cats=[...new Set(gastosData.map(g=>g.categoria).filter(Boolean))].sort();
   const current=$g('gCategory').value;
-  $g('gCategory').innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${gEsc(c)}">${gEsc(/^acess[oó]rios do apt\.?$/i.test(c.trim()) ? "Eletrodomésticos" : c)}</option>`).join('');
+  $g('gCategory').innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${gEsc(c)}">${gEsc(c)}</option>`).join('');
   if(cats.includes(current)) $g('gCategory').value=current;
   const payments=[...new Set(gastosData.map(g=>g.metodoPagamento).filter(Boolean))].sort();
   const currentPayment=$g('gPaymentFilter').value;
@@ -2774,6 +2778,7 @@ function renderGastos(){
       <td>${gDateFmt(g.data)}</td>
       <td><strong>${gEsc(g.nome)}</strong></td>
       <td>${gEsc(g.categoria||'-')}</td>
+      <td>${gEsc(g.filtroGeral||'-')}</td>
       <td>${gEsc(g.descricao||'-')}${(g.arquivos||[]).length?`<div class="gasto-files">${g.arquivos.map(f=>`<div class="gasto-file"><span>📎</span><span class="gasto-file-name" title="${gEsc(f.name)}">${gEsc(f.name)}</span><span>${gFormatBytes(f.size)}</span><button data-g-preview="${g.id}" data-file-id="${f.id}">Visualizar</button><button data-g-download="${g.id}" data-file-id="${f.id}">Baixar</button></div>`).join('')}</div>`:''}</td>
       <td>${gEsc(g.metodoPagamento||'-')}</td>
       <td class="gasto-money">${gMoney(g.valor)}</td>
@@ -2781,7 +2786,7 @@ function renderGastos(){
         <button class="gasto-btn" data-g-edit="${g.id}">Editar</button>
         <button class="gasto-btn danger" data-g-del="${g.id}">Excluir</button>
       </div></td>
-    </tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:40px;color:#899496">Nenhum gasto encontrado.</td></tr>`;
+    </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;padding:40px;color:#899496">Nenhum gasto encontrado.</td></tr>`;
 
   document.querySelectorAll('[data-g-edit]').forEach(b=>b.onclick=()=>openGasto(b.dataset.gEdit));
   document.querySelectorAll('[data-g-del]').forEach(b=>b.onclick=()=>deleteGasto(b.dataset.gDel));
@@ -2796,6 +2801,7 @@ function openGasto(id=null){
   $g('gName').value=g?.nome||'';
   $g('gValue').value=g?.valor??'';
   $g('gCat').value=g?.categoria||'';
+  $g('gGeneral').value=g?.filtroGeral||'';
   $g('gDate').value=g?.data||new Date().toISOString().slice(0,10);
   const oldPayment=g?.metodoPagamento||'';
   const paymentSelect=$g('gPayment');
@@ -2845,6 +2851,7 @@ async function saveGasto(){
   const fields={
     nome, valor,
     categoria:$g('gCat').value.trim()||'Outros',
+    filtroGeral:$g('gGeneral').value,
     data,
     metodoPagamento:$g('gPayment').value.trim(),
     descricao:$g('gDesc').value.trim(),
@@ -2918,6 +2925,7 @@ $g('btnExcelGastos').onclick=async()=>{
       'Data':gDateFmt(g.data),
       'Nome do gasto':g.nome||'',
       'Categoria':g.categoria||'',
+      'FILTRO GERAL':g.filtroGeral||'',
       'Descrição':g.descricao||'',
       'Método de pagamento':g.metodoPagamento||'',
       'Valor (R$)':Number(g.valor||0)
@@ -2954,9 +2962,10 @@ $g('gSave').onclick=saveGasto;
 $g('gModal').onclick=e=>{if(e.target===$g('gModal'))closeGasto()};
 ['gSearch','gFrom','gTo'].forEach(id=>$g(id).addEventListener('input',renderGastos));
 $g('gCategory').addEventListener('change',renderGastos);
+$g('gGeneralFilter').addEventListener('change',renderGastos);
 $g('gPaymentFilter').addEventListener('change',renderGastos);
 $g('gClear').onclick=()=>{
-  $g('gSearch').value='';$g('gCategory').value='';$g('gPaymentFilter').value='';$g('gFrom').value='';$g('gTo').value='';renderGastos();
+  $g('gSearch').value='';$g('gGeneralFilter').value='';$g('gCategory').value='';$g('gPaymentFilter').value='';$g('gFrom').value='';$g('gTo').value='';renderGastos();
 };
 
 const gastoChunkCache=new Map();
