@@ -330,6 +330,9 @@
   <div class="gastos-cards">
     <div class="gasto-card"><small>Total dos gastos</small><strong id="gTotal">R$ 0,00</strong></div>
     <div class="gasto-card"><small>Gastos filtrados</small><strong id="gFiltered">R$ 0,00</strong></div>
+    <div class="gasto-card"><small>AQUISIÇÃO DO APT</small><strong id="gSumAquisicao">R$ 0,00</strong></div>
+    <div class="gasto-card"><small>ELETRODOMÉSTICOS</small><strong id="gSumEletro">R$ 0,00</strong></div>
+    <div class="gasto-card"><small>OBRA</small><strong id="gSumObra">R$ 0,00</strong></div>
   </div>
 
   <div class="gastos-tools">
@@ -2765,6 +2768,9 @@ function renderGastos(){
   const filtered=list.reduce((s,g)=>s+Number(g.valor||0),0);
   setG('gTotal',gMoney(total));
   setG('gFiltered',gMoney(filtered));
+  setG('gSumAquisicao',gMoney(gastosData.filter(g=>g.filtroGeral==='AQUISIÇÃO DO APT').reduce((s,g)=>s+Number(g.valor||0),0)));
+  setG('gSumEletro',gMoney(gastosData.filter(g=>g.filtroGeral==='ELETRODOMÉSTICOS').reduce((s,g)=>s+Number(g.valor||0),0)));
+  setG('gSumObra',gMoney(gastosData.filter(g=>g.filtroGeral==='OBRA').reduce((s,g)=>s+Number(g.valor||0),0)));
   setG('gLargest',gMoney(Math.max(0,...gastosData.map(g=>Number(g.valor||0)))));
 
   const cats=[...new Set(gastosData.map(g=>g.categoria).filter(Boolean))].sort();
